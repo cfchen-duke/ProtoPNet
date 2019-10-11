@@ -1,6 +1,12 @@
 This code package implements the prototypical part network (ProtoPNet)
 from the paper "This Looks Like That: Deep Learning for Interpretable
-Image Recognition."
+Image Recognition" by Chaofan Chen*, Oscar Li*, Chaofan Tao, Alina Jade Barnett,
+Jonathan Su, and Cynthia Rudin (* denotes equal contribution).
+
+This code package is jointly developed by Chaofan Chen (cfchen-duke)
+and Oscar Li (OscarcarLi), and licensed under MIT License (see LICENSE
+for more information regarding the use and the distribution of this code
+package).
 
 Prerequisites: PyTorch, NumPy, cv2, Augmentor (https://github.com/mdbloice/Augmentor)
 Recommended hardware: 4 NVIDIA Tesla P-100 GPUs or 8 NVIDIA Tesla K-80 GPUs
