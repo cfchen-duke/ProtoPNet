@@ -1,0 +1,5 @@
+CUB-200-2011 can be downloaded from:
+http://www.vision.caltech.edu/visipedia/CUB-200-2011.html
+
+Stanford Cars can be downloaded from:
+https://ai.stanford.edu/~jkrause/cars/car_dataset.html
