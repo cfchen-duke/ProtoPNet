@@ -1,6 +1,9 @@
 import os
 import shutil
-
+import matplotlib.pyplot as plt
+import matplotlib
+import numpy as np
+matplotlib.use("Agg")
 import torch
 import torch.utils.data
 # import torch.utils.data.distributed
@@ -9,7 +12,7 @@ import torchvision.datasets as datasets
 
 import argparse
 import re
-
+from dataHelper import DatasetFolder
 from helpers import makedir
 import model
 import push
@@ -31,7 +34,7 @@ from settings import base_architecture, img_size, prototype_shape, num_classes, 
 
 base_architecture_type = re.match('^[a-z]*', base_architecture).group(0)
 
-model_dir = './saved_models/' + base_architecture + '/' + experiment_run + '/'
+model_dir = '/usr/xtmp/ct214/saved_models/' + base_architecture + '/' + experiment_run + '/'
 makedir(model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), __file__), dst=model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), 'settings.py'), dst=model_dir)
@@ -56,37 +59,42 @@ normalize = transforms.Normalize(mean=mean,
 
 # all datasets
 # train set
-train_dataset = datasets.ImageFolder(
+train_dataset = DatasetFolder(
     train_dir,
-    transforms.Compose([
-        transforms.Resize(size=(img_size, img_size)),
-        transforms.ToTensor(),
-        normalize,
+    augmentation=False,
+    loader=np.load,
+    extensions=("npy",),
+    transform = transforms.Compose([
+        torch.from_numpy,
     ]))
 train_loader = torch.utils.data.DataLoader(
     train_dataset, batch_size=train_batch_size, shuffle=True,
     num_workers=4, pin_memory=False)
+
 # push set
-train_push_dataset = datasets.ImageFolder(
-    train_push_dir,
-    transforms.Compose([
-        transforms.Resize(size=(img_size, img_size)),
-        transforms.ToTensor(),
+train_push_dataset = DatasetFolder(
+    root = train_push_dir,
+    loader = np.load,
+    extensions=("npy",),
+    transform = transforms.Compose([
+        torch.from_numpy,
     ]))
 train_push_loader = torch.utils.data.DataLoader(
     train_push_dataset, batch_size=train_push_batch_size, shuffle=False,
     num_workers=4, pin_memory=False)
+
 # test set
-test_dataset = datasets.ImageFolder(
+test_dataset =DatasetFolder(
     test_dir,
-    transforms.Compose([
-        transforms.Resize(size=(img_size, img_size)),
-        transforms.ToTensor(),
-        normalize,
+    loader=np.load,
+    extensions=("npy",),
+    transform = transforms.Compose([
+        torch.from_numpy,
     ]))
 test_loader = torch.utils.data.DataLoader(
     test_dataset, batch_size=test_batch_size, shuffle=False,
     num_workers=4, pin_memory=False)
+
 
 # we should look into distributed sampler more carefully at torch.utils.data.distributed.DistributedSampler(train_dataset)
 log('training set size: {0}'.format(len(train_loader.dataset)))
@@ -137,6 +145,11 @@ from settings import num_train_epochs, num_warm_epochs, push_start, push_epochs
 # train the model
 log('start training')
 import copy
+
+train_auc = []
+test_auc = []
+currbest, best_epoch = 0, -1
+
 for epoch in range(num_train_epochs):
     log('epoch: \t{0}'.format(epoch))
 
@@ -150,10 +163,24 @@ for epoch in range(num_train_epochs):
         _ = tnt.train(model=ppnet_multi, dataloader=train_loader, optimizer=joint_optimizer,
                       class_specific=class_specific, coefs=coefs, log=log)
 
-    accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
+    auc = tnt.test(model=ppnet_multi, dataloader=test_loader,
                     class_specific=class_specific, log=log)
-    save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'nopush', accu=accu,
+    save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'nopush', accu=auc,
                                 target_accu=0.70, log=log)
+
+    train_auc.append(_)
+    if currbest < auc:
+        currbest = auc
+        best_epoch = epoch
+    log("\tcurrent best auc is: \t\t{} at epoch {}".format(currbest, best_epoch))
+    test_auc.append(auc)
+    plt.plot(train_auc, "b", label="train")
+    plt.plot(test_auc, "r", label="test")
+    plt.ylim(0.4, 1)
+    plt.legend()
+    plt.savefig(model_dir + 'train_test_auc.png')
+    plt.close()
+
 
     if epoch >= push_start and epoch in push_epochs:
         push.push_prototypes(
@@ -180,10 +207,23 @@ for epoch in range(num_train_epochs):
                 log('iteration: \t{0}'.format(i))
                 _ = tnt.train(model=ppnet_multi, dataloader=train_loader, optimizer=last_layer_optimizer,
                               class_specific=class_specific, coefs=coefs, log=log)
-                accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
+                auc = tnt.test(model=ppnet_multi, dataloader=test_loader,
                                 class_specific=class_specific, log=log)
-                save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + '_' + str(i) + 'push', accu=accu,
+                save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + '_' + str(i) + 'push', accu=auc,
                                             target_accu=0.70, log=log)
+                train_auc.append(_)
+                test_auc.append(auc)
+
+                if currbest < auc:
+                    currbest = auc
+                    best_epoch = epoch
+
+                plt.plot(train_auc, "b", label="train")
+                plt.plot(test_auc, "r", label="test")
+                plt.ylim(0.4, 1)
+                plt.legend()
+                plt.savefig(model_dir + 'train_test_auc' + ".png")
+                plt.close()
    
 logclose()
 

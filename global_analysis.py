@@ -2,7 +2,7 @@ import torch
 import torch.utils.data
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-
+from dataHelper import DatasetFolder
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
@@ -52,25 +52,27 @@ train_dir = train_push_dir
 batch_size = 100
 
 # train set: do not normalize
-train_dataset = datasets.ImageFolder(
+train_dataset = DatasetFolder(
     train_dir,
-    transforms.Compose([
-        transforms.Resize(size=(img_size, img_size)),
-        transforms.ToTensor(),
+    augmentation=False,
+    loader=np.load,
+    extensions=("npy",),
+    transform = transforms.Compose([
+        torch.from_numpy,
     ]))
 train_loader = torch.utils.data.DataLoader(
     train_dataset, batch_size=batch_size, shuffle=True,
     num_workers=4, pin_memory=False)
-
-# test set: do not normalize
-test_dataset = datasets.ImageFolder(
+# test set
+test_dataset =DatasetFolder(
     test_dir,
-    transforms.Compose([
-        transforms.Resize(size=(img_size, img_size)),
-        transforms.ToTensor(),
+    loader=np.load,
+    extensions=("npy",),
+    transform = transforms.Compose([
+        torch.from_numpy,
     ]))
 test_loader = torch.utils.data.DataLoader(
-    test_dataset, batch_size=batch_size, shuffle=True,
+    test_dataset, batch_size=batch_size, shuffle=False,
     num_workers=4, pin_memory=False)
 
 root_dir_for_saving_train_images = os.path.join(load_model_dir,
@@ -136,3 +138,7 @@ find_nearest.find_k_nearest_patches_to_prototypes(
         full_save=True,
         root_dir_for_saving_images=root_dir_for_saving_test_images,
         log=print)
+
+
+print("see analysis in ", root_dir_for_saving_train_images)
+print("see analysis in ", root_dir_for_saving_test_images)

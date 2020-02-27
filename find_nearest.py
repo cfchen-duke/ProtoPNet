@@ -79,7 +79,7 @@ def find_k_nearest_patches_to_prototypes(dataloader, # pytorch dataloader (must 
         # a heap in python is just a maintained list
         heaps.append([])
 
-    for idx, (search_batch_input, search_y) in enumerate(dataloader):
+    for idx, (search_batch_input, search_y, patient_id) in enumerate(dataloader):
         print('batch {}'.format(idx))
         if preprocess_input_function is not None:
             # print('preprocessing input for pushing ...')

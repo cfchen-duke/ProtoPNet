@@ -8,12 +8,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 from PIL import Image
-
+from dataHelper import DatasetFolder
 import re
-
+import numpy as np
 import os
 import copy
-
+from skimage.transform import resize
 from helpers import makedir, find_high_activation_crop
 import model
 import push
@@ -24,29 +24,19 @@ from preprocess import mean, std, preprocess_input_function, undo_preprocess_inp
 
 import argparse
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-gpuid', nargs=1, type=str, default='0')
-parser.add_argument('-modeldir', nargs=1, type=str)
-parser.add_argument('-model', nargs=1, type=str)
-parser.add_argument('-imgdir', nargs=1, type=str)
-parser.add_argument('-img', nargs=1, type=str)
-parser.add_argument('-imgclass', nargs=1, type=int, default=-1)
-args = parser.parse_args()
-
-os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid[0]
-
+k=1
 # specify the test image to be analyzed
-test_image_dir = args.imgdir[0] #'./local_analysis/Painted_Bunting_Class15_0081/'
-test_image_name = args.img[0] #'Painted_Bunting_0081_15230.jpg'
-test_image_label = args.imgclass[0] #15
+test_image_dir = '/usr/project/xtmp/mammo/binary_Feb/lesion_or_not/lesion/'
+test_image_name ='DP_AAZH_R_MLO_8#0.npy'
+test_image_label = 1
 
 test_image_path = os.path.join(test_image_dir, test_image_name)
 
 # load the model
 check_test_accu = False
 
-load_model_dir = args.modeldir[0] #'./saved_models/vgg19/003/'
-load_model_name = args.model[0] #'10_18push0.7822.pth'
+load_model_dir = '/usr/project/xtmp/ct214/Research_Mammo/Forked_PPNet/ProtoPNet/saved_models/resnet152/PPNETLesionOrNot0225_1/'
+load_model_name = '50_1push0.9100.pth'
 
 #if load_model_dir[-1] == '/':
 #    model_base_architecture = load_model_dir.split('/')[-3]
@@ -55,12 +45,13 @@ load_model_name = args.model[0] #'10_18push0.7822.pth'
 #    model_base_architecture = load_model_dir.split('/')[-2]
 #    experiment_run = load_model_dir.split('/')[-1]
 
-model_base_architecture = load_model_dir.split('/')[2]
-experiment_run = '/'.join(load_model_dir.split('/')[3:])
+model_base_architecture = load_model_dir.split('/')[-3]
+experiment_run = load_model_dir.split('/')[-2]
 
-save_analysis_path = os.path.join(test_image_dir, model_base_architecture,
-                                  experiment_run, load_model_name)
+save_analysis_path = "/usr/xtmp/ct214/model_visualization_result" +test_image_dir+ model_base_architecture+ \
+                     experiment_run + load_model_name + "/"
 makedir(save_analysis_path)
+print(save_analysis_path)
 
 log, logclose = create_logger(log_filename=os.path.join(save_analysis_path, 'local_analysis.log'))
 
@@ -90,13 +81,15 @@ from settings import test_dir
 if check_test_accu:
     test_batch_size = 100
 
-    test_dataset = datasets.ImageFolder(
+    test_dataset = DatasetFolder(
         test_dir,
-        transforms.Compose([
-            transforms.Resize(size=(img_size, img_size)),
-            transforms.ToTensor(),
-            normalize,
-        ]))
+        augmentation=False,
+        loader=np.load,
+        extensions=("npy",),
+        transform=transforms.Compose([
+            torch.from_numpy,
+        ])
+        )
     test_loader = torch.utils.data.DataLoader(
         test_dataset, batch_size=test_batch_size, shuffle=True,
         num_workers=4, pin_memory=False)
@@ -132,7 +125,7 @@ def save_preprocessed_img(fname, preprocessed_imgs, index=0):
     undo_preprocessed_img = undo_preprocessed_img.detach().cpu().numpy()
     undo_preprocessed_img = np.transpose(undo_preprocessed_img, [1,2,0])
     
-    plt.imsave(fname, undo_preprocessed_img)
+    plt.imsave(fname, resize(np.load(test_image_path), (224,224)), cmap="gray")
     return undo_preprocessed_img
 
 def save_prototype(fname, epoch, index):
@@ -176,9 +169,23 @@ preprocess = transforms.Compose([
    normalize
 ])
 
-img_pil = Image.open(test_image_path)
-img_tensor = preprocess(img_pil)
-img_variable = Variable(img_tensor.unsqueeze(0))
+#img_pil = Image.open(test_image_path)
+
+# np load
+img_pil = np.load(test_image_path)
+img_pil = img_pil.astype(np.float32)
+sample = resize(img_pil, (224,224))
+
+temp = []
+for i in range(3):
+    # sample = random_rotation(sample)
+    temp.append(sample)
+    #        temp = [sample, sample, sample]
+img_pil = np.stack(temp)
+img_tensor = torch.from_numpy(img_pil)
+#img_tensor = preprocess(img_pil)
+
+img_variable = Variable(img_tensor.unsqueeze(0)).float()
 
 images_test = img_variable.cuda()
 labels_test = torch.tensor([test_image_label])
@@ -270,7 +277,7 @@ for i in range(1,11):
     log('--------------------------------------------------------------')
 
 ##### PROTOTYPES FROM TOP-k CLASSES
-k = 50
+
 log('Prototypes from top-%d classes:' % k)
 topk_logits, topk_classes = torch.topk(logits[idx], k=k)
 for i,c in enumerate(topk_classes.detach().cpu().numpy()):
@@ -349,6 +356,7 @@ if predicted_cls == correct_cls:
     log('Prediction is correct.')
 else:
     log('Prediction is wrong.')
+print("saved in ", save_analysis_path)
 
 logclose()
 

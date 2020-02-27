@@ -1,6 +1,7 @@
 import time
 import torch
-
+from sklearn.metrics import roc_auc_score
+import numpy as np
 from helpers import list_of_distances, make_one_hot
 
 def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l1_mask=True,
@@ -15,13 +16,16 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
     n_examples = 0
     n_correct = 0
     n_batches = 0
+    total_output = []
+    total_one_hot_label = []
+    confusion_matrix = [0,0,0,0]
     total_cross_entropy = 0
     total_cluster_cost = 0
     # separation cost is meaningful only for class_specific
     total_separation_cost = 0
     total_avg_separation_cost = 0
 
-    for i, (image, label) in enumerate(dataloader):
+    for i, (image, label, patient_id) in enumerate(dataloader):
         input = image.cuda()
         target = label.cuda()
 
@@ -73,6 +77,27 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
             n_examples += target.size(0)
             n_correct += (predicted == target).sum().item()
 
+            # confusion matrix
+            for t_idx, t in enumerate(target):
+                if predicted[t_idx] == t and predicted[t_idx] == 1:  # true positive
+                    confusion_matrix[0] += 1
+                elif t == 0 and predicted[t_idx] == 1:
+                    confusion_matrix[1] += 1  # false positives
+                elif t == 1 and predicted[t_idx] == 0:
+                    confusion_matrix[2] += 1  # false negative
+                else:
+                    confusion_matrix[3] += 1
+
+            # one hot label for AUC
+            one_hot_label = np.zeros(shape=(len(target), model.module.num_classes))
+            for k in range(len(target)):
+                one_hot_label[k][target[k].item()] = 1
+
+            prob = torch.nn.functional.softmax(output, dim=1)
+            total_output.extend(prob.data.cpu().numpy())
+            total_one_hot_label.extend(one_hot_label)
+            # one hot label for AUC
+
             n_batches += 1
             total_cross_entropy += cross_entropy.item()
             total_cluster_cost += cluster_cost.item()
@@ -114,14 +139,20 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
     if class_specific:
         log('\tseparation:\t{0}'.format(total_separation_cost / n_batches))
         log('\tavg separation:\t{0}'.format(total_avg_separation_cost / n_batches))
+
+    avg_auc = 0
+    avg_auc += roc_auc_score(np.array(total_one_hot_label), np.array(total_output))
+    log("\tauc score is: \t\t{}".format(avg_auc))
+
     log('\taccu: \t\t{0}%'.format(n_correct / n_examples * 100))
     log('\tl1: \t\t{0}'.format(model.module.last_layer.weight.norm(p=1).item()))
     p = model.module.prototype_vectors.view(model.module.num_prototypes, -1).cpu()
     with torch.no_grad():
         p_avg_pair_dist = torch.mean(list_of_distances(p, p))
     log('\tp dist pair: \t{0}'.format(p_avg_pair_dist.item()))
+    log('\tthe confusion matrix is: \t\t{0}'.format(confusion_matrix))
 
-    return n_correct / n_examples
+    return avg_auc
 
 
 def train(model, dataloader, optimizer, class_specific=False, coefs=None, log=print):
