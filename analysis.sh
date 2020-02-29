@@ -5,4 +5,4 @@ source /home/home2/ct214/virtual_envs/ml/bin/activate
 echo "start running"
 nvidia-smi
 
-srun -u python3 global_analysis.py -modeldir='/usr/project/xtmp/ct214/Research_Mammo/Forked_PPNet/ProtoPNet/saved_models/resnet152/PPNETLesionOrNot0225_1/' -model='50_1push0.9100.pth'
+srun -u python3 global_analysis.py -modeldir='/usr/project/xtmp/ct214/saved_models/resnet152/PPNETLesionOrNot0227_1_1024/' -model='40_6push0.9480.pth'

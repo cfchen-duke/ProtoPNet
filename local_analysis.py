@@ -26,8 +26,13 @@ import argparse
 
 k=1
 # specify the test image to be analyzed
-test_image_dir = '/usr/project/xtmp/mammo/binary_Feb/lesion_or_not/lesion/'
-test_image_name ='DP_AAZH_R_MLO_8#0.npy'
+parser = argparse.ArgumentParser()
+parser.add_argument('-test_image', nargs=1, type=str, default='0')
+args = parser.parse_args()
+
+
+test_image_dir = '/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/lesion/'
+test_image_name = args.test_image[0] # 'DP_AAPR_R_MLO_3#0.npy'
 test_image_label = 1
 
 test_image_path = os.path.join(test_image_dir, test_image_name)
@@ -35,8 +40,8 @@ test_image_path = os.path.join(test_image_dir, test_image_name)
 # load the model
 check_test_accu = False
 
-load_model_dir = '/usr/project/xtmp/ct214/Research_Mammo/Forked_PPNet/ProtoPNet/saved_models/resnet152/PPNETLesionOrNot0225_1/'
-load_model_name = '50_1push0.9100.pth'
+load_model_dir = '/usr/project/xtmp/ct214/saved_models/resnet152/PPNETLesionOrNot0227_1_1024/'
+load_model_name = '40_6push0.9480.pth'
 
 #if load_model_dir[-1] == '/':
 #    model_base_architecture = load_model_dir.split('/')[-3]
@@ -48,8 +53,8 @@ load_model_name = '50_1push0.9100.pth'
 model_base_architecture = load_model_dir.split('/')[-3]
 experiment_run = load_model_dir.split('/')[-2]
 
-save_analysis_path = "/usr/xtmp/ct214/model_visualization_result" +test_image_dir+ model_base_architecture+ \
-                     experiment_run + load_model_name + "/"
+save_analysis_path = "/usr/xtmp/ct214/model_visualization_result" + model_base_architecture+ \
+                     experiment_run + load_model_name + "/" +test_image_name + "/"
 makedir(save_analysis_path)
 print(save_analysis_path)
 

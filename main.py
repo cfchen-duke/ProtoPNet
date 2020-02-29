@@ -29,15 +29,15 @@ parser.add_argument("-latent", nargs=1, type=int, default=32)
 args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid[0]
 print(os.environ['CUDA_VISIBLE_DEVICES'])
-latent_shape = args.latent
-experiment_run = args.experiment_run
+latent_shape = args.latent[0]
+experiment_run = args.experiment_run[0]
 
 # book keeping namings and code
 from settings import base_architecture, img_size, prototype_shape, num_classes, \
                      prototype_activation_function, add_on_layers_type
 
 base_architecture_type = re.match('^[a-z]*', base_architecture).group(0)
-prototype_shape[1] = latent_shape
+prototype_shape = (prototype_shape[0], latent_shape, prototype_shape[2], prototype_shape[3])
 print(prototype_shape)
 
 model_dir = '/usr/xtmp/ct214/saved_models/' + base_architecture + '/' + experiment_run + '/'
