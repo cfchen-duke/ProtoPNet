@@ -119,7 +119,7 @@ ppnet = model.construct_PPNet(base_architecture=base_architecture,
 #    ppnet.set_last_layer_incorrect_connection(incorrect_strength=0)
 ppnet = ppnet.cuda()
 ppnet_multi = torch.nn.DataParallel(ppnet)
-class_specific = True
+from settings import class_specific
 
 # define optimizer
 from settings import joint_optimizer_lrs, joint_lr_step_size
