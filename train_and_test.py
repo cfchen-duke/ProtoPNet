@@ -69,7 +69,22 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
 
             else:
                 min_distance, _ = torch.min(min_distances, dim=1)
-                cluster_cost = torch.mean(min_distance)
+                # label=0 negative, label=1 positive, minimize cluster loss maximize separation loss
+                # all prototypes are positive
+                positive_sample_index = torch.flatten(torch.nonzero(label)).tolist()
+                negative_sample_index = torch.flatten(torch.nonzero(label == 0)).tolist()
+                if len(positive_sample_index) > 0:
+                    positive_proto_distance = min_distance[positive_sample_index]
+                else:
+                    positive_proto_distance = torch.zeros(1)
+
+                if len(negative_sample_index) > 0:
+                    negative_proto_distance = min_distance[negative_sample_index]
+                else:
+                    negative_proto_distance = torch.zeros(1)
+
+                cluster_cost = torch.mean(positive_proto_distance)
+                separation_cost = torch.mean(negative_proto_distance)
                 l1 = model.module.last_layer.weight.norm(p=1)
 
             # evaluation statistics
@@ -102,7 +117,8 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
             total_cross_entropy += cross_entropy.item()
             total_cluster_cost += cluster_cost.item()
             total_separation_cost += separation_cost.item()
-            total_avg_separation_cost += avg_separation_cost.item()
+            if class_specific:
+                total_avg_separation_cost += avg_separation_cost.item()
 
         # compute gradient and do SGD step
         if is_train:
@@ -118,6 +134,7 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
                 if coefs is not None:
                     loss = (coefs['crs_ent'] * cross_entropy
                           + coefs['clst'] * cluster_cost
+                          + coefs['sep'] * separation_cost
                           + coefs['l1'] * l1)
                 else:
                     loss = cross_entropy + 0.8 * cluster_cost + 1e-4 * l1
@@ -136,8 +153,8 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
     log('\ttime: \t{0}'.format(end -  start))
     log('\tcross ent: \t{0}'.format(total_cross_entropy / n_batches))
     log('\tcluster: \t{0}'.format(total_cluster_cost / n_batches))
+    log('\tseparation:\t{0}'.format(total_separation_cost / n_batches))
     if class_specific:
-        log('\tseparation:\t{0}'.format(total_separation_cost / n_batches))
         log('\tavg separation:\t{0}'.format(total_avg_separation_cost / n_batches))
 
     avg_auc = 0

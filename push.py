@@ -149,12 +149,12 @@ def update_prototypes_on_batch(search_batch_input,
 
     del protoL_input_torch, proto_dist_torch
 
-    if class_specific:
-        class_to_img_index_dict = {key: [] for key in range(num_classes)}
-        # img_y is the image's integer label
-        for img_index, img_y in enumerate(search_y):
-            img_label = img_y.item()
-            class_to_img_index_dict[img_label].append(img_index)
+    # if class_specific:
+    class_to_img_index_dict = {key: [] for key in range(num_classes)}
+    # img_y is the image's integer label
+    for img_index, img_y in enumerate(search_y):
+        img_label = img_y.item()
+        class_to_img_index_dict[img_label].append(img_index)
 
     prototype_shape = prototype_network_parallel.module.prototype_shape
     n_prototypes = prototype_shape[0]
@@ -175,20 +175,26 @@ def update_prototypes_on_batch(search_batch_input,
         else:
             # if it is not class specific, then we will search through
             # every example
-            proto_dist_j = proto_dist_[:,j,:,:]
+            # proto_dist_j = proto_dist_[:,j,:,:]
+            target_class = 1
+            # if there is not images of the target_class from this batch
+            # we go on to the next prototype
+            if len(class_to_img_index_dict[target_class]) == 0:
+                continue
+            proto_dist_j = proto_dist_[class_to_img_index_dict[target_class]][:, j, :, :]
 
         batch_min_proto_dist_j = np.amin(proto_dist_j)
         if batch_min_proto_dist_j < global_min_proto_dist[j]:
             batch_argmin_proto_dist_j = \
                 list(np.unravel_index(np.argmin(proto_dist_j, axis=None),
                                       proto_dist_j.shape))
-            if class_specific:
-                '''
-                change the argmin index from the index among
-                images of the target class to the index in the entire search
-                batch
-                '''
-                batch_argmin_proto_dist_j[0] = class_to_img_index_dict[target_class][batch_argmin_proto_dist_j[0]]
+            # if class_specific:
+            #     '''
+            #     change the argmin index from the index among
+            #     images of the target class to the index in the entire search
+            #     batch
+            #     '''
+            batch_argmin_proto_dist_j[0] = class_to_img_index_dict[target_class][batch_argmin_proto_dist_j[0]]
 
             # retrieve the corresponding feature map patch
             img_index_in_batch = batch_argmin_proto_dist_j[0]
