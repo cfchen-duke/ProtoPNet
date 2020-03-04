@@ -40,8 +40,8 @@ test_image_path = os.path.join(test_image_dir, test_image_name)
 # load the model
 check_test_accu = False
 
-load_model_dir = '/usr/project/xtmp/ct214/saved_models/resnet152/PPNETLesionOrNot0227_1_1024/'
-load_model_name = '40_6push0.9480.pth'
+load_model_dir = '/usr/project/xtmp/ct214/saved_models/resnet152/PPNETLesionOrNot0229_512/'
+load_model_name = '100_14push0.9426.pth'
 
 #if load_model_dir[-1] == '/':
 #    model_base_architecture = load_model_dir.split('/')[-3]
