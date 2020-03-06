@@ -283,6 +283,15 @@ def dataAugNumpy(path, targetNumber, targetDir):
     print(count)
 
 
+def window_adjustment(wwdith, wcen):
+    if wcen=2047 and wwidth=4096:
+        return wwidth, wcen
+    else:
+        new_wcen = np.random.randint(-100, 300)
+        new_wwidth = np.random.randint(-200, 300)
+        return new_wwidth, new_wcen
+
+
 def cropROI(target):
     """Crops out the ROI of the image as defined in the spreadsheet provided by Yinhao."""
     # df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
@@ -336,6 +345,8 @@ def cropROI(target):
 
             wwidth = np.asarray(ast.literal_eval(win_width[i])).max()
             wcen = np.median(np.asarray(ast.literal_eval(win_cen[i])))
+
+            wwdith, wcen = window_adjustment(wwdith, wcen)
 
             image = ((image - wcen) / wwidth) + 0.5
             image = np.clip(image, 0, 1)
