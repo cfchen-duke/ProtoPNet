@@ -41,6 +41,16 @@ def random_flip(input, axis):
     else:
         return input
 
+def random_crop(input):
+    ran = random.random()
+    if ran > 0.2:
+        # find a random place to be the left upper corner of the crop
+        rx = int(random.random() * input.shape[0] // 10)
+        ry = int(random.random() * input.shape[1] // 10)
+        return input[rx : rx + int(input.shape[0] * 9 // 10), ry : ry + int(input.shape[1] * 9 // 10)]
+    else:
+        return input
+
 
 def random_rotate_90(input):
     ran = random.random()
@@ -56,10 +66,10 @@ def random_shift(input, axis, range):
 
 def random_rotation(x, chance):
     ran = random.random()
-    if ran > chance:
+    if ran > 1- chance:
         # create black edges
         angle = np.random.randint(0, 360)
-        return rotate(x, angle=angle, reshape=False)
+        return rotate(x, angle=angle, reshape=True)
     else:
         return x
 
@@ -220,13 +230,26 @@ def dataAugNumpy(path, targetNumber, targetDir):
             for file in files:
                 filepath = os.path.join(root, file)
                 arr = np.load(filepath)
-                arr = random_flip(arr, 0)
-                arr = random_flip(arr, 1)
-                arr = random_rotate_90(arr)
-                arr = random_rotate_90(arr)
-                arr = random_rotate_90(arr)
-                np.save(targetDir + class1 + "/" + str(count) + ".npy", arr)
-                count += 1
+                try:
+                    arr = random_crop(arr)
+                    arr = random_rotation(arr, 0.9)
+                    arr = random_flip(arr, 0)
+                    arr = random_flip(arr, 1)
+                    arr = random_rotate_90(arr)
+                    arr = random_rotate_90(arr)
+                    arr = random_rotate_90(arr)
+                    # arr = random_rotation(arr, 0.9)
+                    if count %150 == 0:
+                        if not os.path.exists("./visualizations_of_augmentation/" + class2 + class1 + "/"):
+                            os.makedirs("./visualizations_of_augmentation/" + class2 + class1 + "/")
+                        imsave("./visualizations_of_augmentation/" + class2 + class1 + "/"+str(count), arr, cmap="gray")
+                    np.save(targetDir + class1 + "/" + str(count) + ".npy", arr)
+                    count += 1
+                    print(count)
+                except:
+                    if not os.path.exists("./error_of_augmentation/" + class2 + "/"):
+                        os.makedirs("./error_of_augmentation/" + class2 + "/")
+                    np.save("./error_of_augmentation/" + class2 + "/" + str(count), arr)
                 if count > targetNumber:
                     break
     print(count)
@@ -236,13 +259,25 @@ def dataAugNumpy(path, targetNumber, targetDir):
             for file in files:
                 filepath = os.path.join(root, file)
                 arr = np.load(filepath)
-                arr = random_flip(arr, 0)
-                arr = random_flip(arr, 1)
-                arr = random_rotate_90(arr)
-                arr = random_rotate_90(arr)
-                arr = random_rotate_90(arr)
-                np.save(targetDir + class2 + "/" + str(count) + ".npy", arr)
-                count += 1
+                try:
+                    arr = random_rotation(arr, 0.9)
+                    arr = random_flip(arr, 0)
+                    arr = random_flip(arr, 1)
+                    arr = random_rotate_90(arr)
+                    arr = random_rotate_90(arr)
+                    arr = random_rotate_90(arr)
+                    # arr = random_rotation(arr, 0.9)
+                    if count %150 == 0:
+                        if not os.path.exists("./visualizations_of_augmentation/" + class2 + "/"):
+                            os.makedirs("./visualizations_of_augmentation/" + class2 + "/")
+                        imsave("./visualizations_of_augmentation/" + class2 + "/"+str(count), arr,cmap="gray")
+                    np.save(targetDir + class2 + "/" + str(count) + ".npy", arr)
+                    count += 1
+                except:
+                    if not os.path.exists("./error_of_augmentation/" + class2 + "/"):
+                        os.makedirs("./error_of_augmentation/" + class2 + "/")
+                    np.save("./error_of_augmentation/" + class2 + "/" + str(count), arr)
+
                 if count > targetNumber:
                     break
     print(count)
@@ -510,20 +545,14 @@ def visualize(path):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-gpuid', nargs=1, type=str, default='0')  # python3 main.py -gpuid=1,2,3
-    args = parser.parse_args()
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid[0]
-    print(os.environ['CUDA_VISIBLE_DEVICES'])
-
     # cropROI("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/lesion/")
     # crop_negative_patches("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/allneg/")
-    #cleanup("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/")
-    #cleanup("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not/")
-    dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not/", 2000, "/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_augmented/")
-    # for margin in ["circumscribed", "obscured", "microlobulated", "spiculated", "indistinct"]:
-    #     cleanup("/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/normalized_rois/binary_context_roi/"
-    #             "binary_train_" + margin + "_augmented/other/")
+    # cleanup("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/")
+    # cleanup("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not/")
+    # dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not/", 30000, "/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_augmented_more/")
+    for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
+        dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "/", 10000,
+                "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_more/")
 
     # for pos in ["circumscribed","indistinct", "microlobulated", "obscured", "spiculated"]:
     #     for t in ["train", "test"]:
