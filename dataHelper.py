@@ -292,7 +292,7 @@ def window_adjustment(wwidth, wcen):
         return new_wwidth, new_wcen
 
 
-def cropROI(target):
+def cropROI(target, augByWindow=False, numAugByWin=5):
     """Crops out the ROI of the image as defined in the spreadsheet provided by Yinhao."""
     # df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
     df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
@@ -343,63 +343,124 @@ def cropROI(target):
             # ds = dcm.read_file(path)
             # image = ds.pixel_array
 
-            wwidth = np.asarray(ast.literal_eval(win_width[i])).max()
-            wcen = np.median(np.asarray(ast.literal_eval(win_cen[i])))
+            if augByWindow==True:
+                for k in range(numAugByWin):
+                    wwidth = np.asarray(ast.literal_eval(win_width[i])).max()
+                    wcen = np.median(np.asarray(ast.literal_eval(win_cen[i])))
 
-            wwidth, wcen = window_adjustment(wwidth, wcen)
+                    wwidth, wcen = window_adjustment(wwidth, wcen)
 
-            image = ((image - wcen) / wwidth) + 0.5
-            image = np.clip(image, 0, 1)
+                    image = ((image - wcen) / wwidth) + 0.5
+                    image = np.clip(image, 0, 1)
 
-            # make sure that we are looking at Mass but not Calc
-            # class_ = classinfo.split(",")
-            # mass_index = []  # which pair of ROI is mass
-            # for p, c_ in enumerate(class_):
-            #     if c_ == "Mass":
-            #         mass_index.append(p)
+                    # make sure that we are looking at Mass but not Calc
+                    # class_ = classinfo.split(",")
+                    # mass_index = []  # which pair of ROI is mass
+                    # for p, c_ in enumerate(class_):
+                    #     if c_ == "Mass":
+                    #         mass_index.append(p)
 
-            # read the location
-            location = locations[i]
-            j, curr, temp = 0, "", []
-            while j < len(location):
-                if location[j] in "1234567890":
-                    curr += location[j]
-                else:
-                    if curr:
-                        temp.append(int(curr))
-                        curr = ""
-                j += 1
-            location = temp
-            if len(location) % 4 != 0:
-                print("Failed because of Illegal location information ", location, " for name ", name)
-                continue
-            for j in range(len(location) // 4):
-                # if j not in mass_index:
-                #     continue
-                x1, y1, x2, y2 = location[4 * j:4 * (j + 1)]
-                x1, y1, x2, y2 = max(0, min(x1, x2) - 100), max(0, min(y1, y2) - 100), \
-                                 min(image.shape[0], max(x1, x2) + 100), min(image.shape[1], max(y1, y2) + 100)
-                # x1, y1 = midx - target_size//2, midy - target_size//2
-                # x2, y2 = x1 + target_size, y1 + target_size
-                roi = image[x1:x2, y1:y2]
+                    # read the location
+                    location = locations[i]
+                    j, curr, temp = 0, "", []
+                    while j < len(location):
+                        if location[j] in "1234567890":
+                            curr += location[j]
+                        else:
+                            if curr:
+                                temp.append(int(curr))
+                                curr = ""
+                        j += 1
+                    location = temp
+                    if len(location) % 4 != 0:
+                        print("Failed because of Illegal location information ", location, " for name ", name)
+                        continue
+                    for j in range(len(location) // 4):
+                        # if j not in mass_index:
+                        #     continue
+                        x1, y1, x2, y2 = location[4 * j:4 * (j + 1)]
+                        x1, y1, x2, y2 = max(0, min(x1, x2) - 100), max(0, min(y1, y2) - 100), \
+                                         min(image.shape[0], max(x1, x2) + 100), min(image.shape[1], max(y1, y2) + 100)
+                        # x1, y1 = midx - target_size//2, midy - target_size//2
+                        # x2, y2 = x1 + target_size, y1 + target_size
+                        roi = image[x1:x2, y1:y2]
 
-                # print(roi.shape)
-                # np.save(target + margin + "/" + name[:-4] + "#" + str(j) + ".npy", roi)
-                np.save(target + name[:-4] + "#" + str(j) + ".npy", roi)
-                avg_shape0 += roi.shape[0]
-                avg_shape1 += roi.shape[1]
-                max_shape0 = max(max_shape0, roi.shape[0])
-                max_shape1 = max(max_shape1, roi.shape[1])
-                # Use pypng to write z as a color PNG.
-                # imsave(target + margin + "/" + name, roi)
-                # with open(target + margin + "/" + name, 'wb') as f:
-                ##writer = png.Writer(width=roi.shape[1], height=roi.shape[0], bitdepth=16)
-                ## Convert z to the Python list of lists expected by
-                ## the png writer.
-                # roi2list = roi.tolist()
-                # writer.write(f, roi2list)
-                count += 1
-                print("successfully saved ", name, " . Have saved ", count, " total, seen ", file_count, " files in total")
+                        # print(roi.shape)
+                        # np.save(target + margin + "/" + name[:-4] + "#" + str(j) + ".npy", roi)
+                        target = target[:-1] + "_augByWin/"
+                        np.save(target + name[:-4] + "#" + str(j) + "#" + str(k) + ".npy", roi)
+                        avg_shape0 += roi.shape[0]
+                        avg_shape1 += roi.shape[1]
+                        max_shape0 = max(max_shape0, roi.shape[0])
+                        max_shape1 = max(max_shape1, roi.shape[1])
+                        # Use pypng to write z as a color PNG.
+                        # imsave(target + margin + "/" + name, roi)
+                        # with open(target + margin + "/" + name, 'wb') as f:
+                        ##writer = png.Writer(width=roi.shape[1], height=roi.shape[0], bitdepth=16)
+                        ## Convert z to the Python list of lists expected by
+                        ## the png writer.
+                        # roi2list = roi.tolist()
+                        # writer.write(f, roi2list)
+                        count += 1
+                        print("successfully saved ", name, " . Have saved ", count, " total, seen ", file_count, " files in total")
+
+            else:
+                wwidth = np.asarray(ast.literal_eval(win_width[i])).max()
+                wcen = np.median(np.asarray(ast.literal_eval(win_cen[i])))
+
+                image = ((image - wcen) / wwidth) + 0.5
+                image = np.clip(image, 0, 1)
+
+                # make sure that we are looking at Mass but not Calc
+                # class_ = classinfo.split(",")
+                # mass_index = []  # which pair of ROI is mass
+                # for p, c_ in enumerate(class_):
+                #     if c_ == "Mass":
+                #         mass_index.append(p)
+
+                # read the location
+                location = locations[i]
+                j, curr, temp = 0, "", []
+                while j < len(location):
+                    if location[j] in "1234567890":
+                        curr += location[j]
+                    else:
+                        if curr:
+                            temp.append(int(curr))
+                            curr = ""
+                    j += 1
+                location = temp
+                if len(location) % 4 != 0:
+                    print("Failed because of Illegal location information ", location, " for name ", name)
+                    continue
+                for j in range(len(location) // 4):
+                    # if j not in mass_index:
+                    #     continue
+                    x1, y1, x2, y2 = location[4 * j:4 * (j + 1)]
+                    x1, y1, x2, y2 = max(0, min(x1, x2) - 100), max(0, min(y1, y2) - 100), \
+                                     min(image.shape[0], max(x1, x2) + 100), min(image.shape[1], max(y1, y2) + 100)
+                    # x1, y1 = midx - target_size//2, midy - target_size//2
+                    # x2, y2 = x1 + target_size, y1 + target_size
+                    roi = image[x1:x2, y1:y2]
+
+                    # print(roi.shape)
+                    # np.save(target + margin + "/" + name[:-4] + "#" + str(j) + ".npy", roi)
+                    np.save(target + name[:-4] + "#" + str(j) + "#" + str(j) + ".npy", roi)
+                    avg_shape0 += roi.shape[0]
+                    avg_shape1 += roi.shape[1]
+                    max_shape0 = max(max_shape0, roi.shape[0])
+                    max_shape1 = max(max_shape1, roi.shape[1])
+                    # Use pypng to write z as a color PNG.
+                    # imsave(target + margin + "/" + name, roi)
+                    # with open(target + margin + "/" + name, 'wb') as f:
+                    ##writer = png.Writer(width=roi.shape[1], height=roi.shape[0], bitdepth=16)
+                    ## Convert z to the Python list of lists expected by
+                    ## the png writer.
+                    # roi2list = roi.tolist()
+                    # writer.write(f, roi2list)
+                    count += 1
+                    print("successfully saved ", name, " . Have saved ", count, " total, seen ", file_count,
+                          " files in total")
 
     print(max_shape0, max_shape1)
     print(avg_shape0 / count, avg_shape1 / count)
