@@ -283,8 +283,8 @@ def dataAugNumpy(path, targetNumber, targetDir):
     print(count)
 
 
-def window_adjustment(wwdith, wcen):
-    if wcen=2047 and wwidth=4096:
+def window_adjustment(wwidth, wcen):
+    if wcen==2047 and wwidth==4096:
         return wwidth, wcen
     else:
         new_wcen = np.random.randint(-100, 300)
@@ -346,7 +346,7 @@ def cropROI(target):
             wwidth = np.asarray(ast.literal_eval(win_width[i])).max()
             wcen = np.median(np.asarray(ast.literal_eval(win_cen[i])))
 
-            wwdith, wcen = window_adjustment(wwdith, wcen)
+            wwidth, wcen = window_adjustment(wwidth, wcen)
 
             image = ((image - wcen) / wwidth) + 0.5
             image = np.clip(image, 0, 1)
