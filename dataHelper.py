@@ -295,25 +295,27 @@ def window_adjustment(wwidth, wcen):
 def cropROI(target, augByWindow=False, numAugByWin=5):
     """Crops out the ROI of the image as defined in the spreadsheet provided by Yinhao."""
     # df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
-    df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
+    df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
     # classes = df["Class"]
     locations = df['Box_List']
     win_width = df['Win_Width']
     win_cen = df['Win_Center']
     names = list(df["File_Name"])
     did = set()
+    if augByWindow:
+        target = target[:-1] + "_augByWin/"
     count, max_shape0, max_shape1 = 0, 0, 0
     avg_shape0, avg_shape1 = 0, 0
     file_count = 0
     for root, dir, files in os.walk(
-            "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/test/"):
+            "/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/"):
         for file in files:
             file_count += 1
             # find the index of the name
             path = os.path.join(root, file)
             name_list = file.split("_")
-#            name = "_".join([name_list[-5][-2:]] + name_list[-4:])
-            name = "_".join([name_list[-4][-5:]] + name_list[-3:])
+            name = "_".join([name_list[-5][-2:]] + name_list[-4:])
+#            name = "_".join([name_list[-4][-5:]] + name_list[-3:])
             name = name[:-4] + ".png"
             # name = file[:-4]
             if name in did:
@@ -343,7 +345,7 @@ def cropROI(target, augByWindow=False, numAugByWin=5):
             # ds = dcm.read_file(path)
             # image = ds.pixel_array
 
-            if augByWindow==True:
+            if augByWindow:
                 for k in range(numAugByWin):
                     wwidth = np.asarray(ast.literal_eval(win_width[i])).max()
                     wcen = np.median(np.asarray(ast.literal_eval(win_cen[i])))
@@ -352,13 +354,6 @@ def cropROI(target, augByWindow=False, numAugByWin=5):
 
                     image = ((image - wcen) / wwidth) + 0.5
                     image = np.clip(image, 0, 1)
-
-                    # make sure that we are looking at Mass but not Calc
-                    # class_ = classinfo.split(",")
-                    # mass_index = []  # which pair of ROI is mass
-                    # for p, c_ in enumerate(class_):
-                    #     if c_ == "Mass":
-                    #         mass_index.append(p)
 
                     # read the location
                     location = locations[i]
@@ -386,21 +381,11 @@ def cropROI(target, augByWindow=False, numAugByWin=5):
                         roi = image[x1:x2, y1:y2]
 
                         # print(roi.shape)
-                        # np.save(target + margin + "/" + name[:-4] + "#" + str(j) + ".npy", roi)
-                        target = target[:-1] + "_augByWin/"
-                        np.save(target + name[:-4] + "#" + str(j) + "#" + str(k) + ".npy", roi)
+                        np.save(target + margin + "/" + name[:-4] + "#" + str(j) + "#" + str(k) + ".npy", roi)
                         avg_shape0 += roi.shape[0]
                         avg_shape1 += roi.shape[1]
                         max_shape0 = max(max_shape0, roi.shape[0])
                         max_shape1 = max(max_shape1, roi.shape[1])
-                        # Use pypng to write z as a color PNG.
-                        # imsave(target + margin + "/" + name, roi)
-                        # with open(target + margin + "/" + name, 'wb') as f:
-                        ##writer = png.Writer(width=roi.shape[1], height=roi.shape[0], bitdepth=16)
-                        ## Convert z to the Python list of lists expected by
-                        ## the png writer.
-                        # roi2list = roi.tolist()
-                        # writer.write(f, roi2list)
                         count += 1
                         print("successfully saved ", name, " . Have saved ", count, " total, seen ", file_count, " files in total")
 
@@ -411,12 +396,6 @@ def cropROI(target, augByWindow=False, numAugByWin=5):
                 image = ((image - wcen) / wwidth) + 0.5
                 image = np.clip(image, 0, 1)
 
-                # make sure that we are looking at Mass but not Calc
-                # class_ = classinfo.split(",")
-                # mass_index = []  # which pair of ROI is mass
-                # for p, c_ in enumerate(class_):
-                #     if c_ == "Mass":
-                #         mass_index.append(p)
 
                 # read the location
                 location = locations[i]
@@ -589,7 +568,6 @@ def move_to_binary(pos, before, target):
         for file in files:
             path = os.path.join(root, file)
             if path in seen:
-                print("seen ", path_list)
                 continue
             else:
                 data = np.load(path)
@@ -617,20 +595,20 @@ def visualize(path):
 
 
 if __name__ == "__main__":
-    # cropROI("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/lesion/")
+    # cropROI("/usr/project/xtmp/mammo/binary_Feb/train_context_roi/", augByWindow=True)
     # crop_negative_patches("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/allneg/")
     # cleanup("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/")
     # cleanup("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not/")
     # dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not/", 30000, "/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_augmented_more/")
     for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
-        dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "/", 10000,
-                "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_more/")
+        dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 50000,
+                "binary_train_" + margin + "_augmented_crazy/")
 
     # for pos in ["circumscribed","indistinct", "microlobulated", "obscured", "spiculated"]:
-    #     for t in ["train", "test"]:
-    #          move_to_binary(pos, "/usr/project/xtmp/mammo/binary_Feb/"+ t + "_context_roi/",
+    #     for t in ["train"]:
+    #          move_to_binary(pos, "/usr/project/xtmp/mammo/binary_Feb/"+ t + "_context_roi_augByWin/",
     #                         "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_" + t + "_"
-    #                         + pos + "/")
+    #                         + pos + "_augmented_by_win/")
 
     # print("start data augmenting")
     # for pos in ["circumscribed", "indistinct", "microlobulated", "obscured", "spiculated"]:
