@@ -23,6 +23,9 @@ from log import create_logger
 from preprocess import mean, std, preprocess_input_function, undo_preprocess_input_function
 
 import argparse
+import pandas as pd
+import ast
+import png
 
 k=1
 # specify the test image to be analyzed
@@ -40,8 +43,8 @@ test_image_path = os.path.join(test_image_dir, test_image_name)
 # load the model
 check_test_accu = False
 
-load_model_dir = '/usr/project/xtmp/ct214/saved_models/resnet152/PPNETLesionOrNot0229_512/'
-load_model_name = '100_14push0.9426.pth'
+load_model_dir = '/usr/project/xtmp/ct214/saved_models/vgg16/PPNETLesionOrNot0305_512/'
+load_model_name = '170_16push0.8763.pth'
 
 #if load_model_dir[-1] == '/':
 #    model_base_architecture = load_model_dir.split('/')[-3]
@@ -53,7 +56,7 @@ load_model_name = '100_14push0.9426.pth'
 model_base_architecture = load_model_dir.split('/')[-3]
 experiment_run = load_model_dir.split('/')[-2]
 
-save_analysis_path = "/usr/xtmp/ct214/model_visualization_result" + model_base_architecture+ \
+save_analysis_path = "/usr/xtmp/ct214/model_visualization_result/" + model_base_architecture+ \
                      experiment_run + load_model_name + "/" +test_image_name + "/"
 makedir(save_analysis_path)
 print(save_analysis_path)
@@ -362,6 +365,76 @@ if predicted_cls == correct_cls:
 else:
     log('Prediction is wrong.')
 print("saved in ", save_analysis_path)
+
+def visualize_origninal_image(test_image_name):
+    # visualize the original mammogram
+    df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
+    locations = df['Box_List']
+    win_width = df['Win_Width']
+    win_cen = df['Win_Center']
+    names = list(df["File_Name"])
+    test_image_name = test_image_name.split(".")[0] + ".png"
+    i = names.index(test_image_name)
+    for root, dir, files in os.walk(
+            "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/" + train_or_test + "/"):
+        for file in files:
+            # find the index of the name
+            path = os.path.join(root, file)
+            temp = file.split("_")
+            name = temp[-4][-5:] + "_" + temp[-3] + "_" + temp[-2] + "_" + temp[-1]
+            if name != test_image_name:
+                continue
+
+            # read image into np
+            reader = png.Reader(path)
+            data = reader.read()
+            pixels = data[2]
+            image = []
+            for row in pixels:
+                row = np.asarray(row, dtype=np.uint16)
+                image.append(row)
+            image = np.stack(image, 1)
+
+            wwidth = np.asarray(ast.literal_eval(win_width[i])).max()
+            wcen = np.median(np.asarray(ast.literal_eval(win_cen[i])))
+
+            image = ((image - wcen) / wwidth) + 0.5
+            image = np.clip(image, 0, 1)
+
+            # read the location
+            location = locations[i]
+            j, curr, temp = 0, "", []
+            while j < len(location):
+                if location[j] in "1234567890":
+                    curr += location[j]
+                else:
+                    if curr:
+                        temp.append(int(curr))
+                        curr = ""
+                j += 1
+            location = temp
+            if len(location) % 4 != 0:
+                print("Illegal location information ", location)
+                continue
+            x1, y1, x2, y2 = location[0:4]
+            x1, y1, x2, y2 = max(0, min(x1, x2) - 100), max(0, min(y1, y2) - 100), \
+                             min(image.shape[0], max(x1, x2) + 100), min(image.shape[1], max(y1, y2) + 100)
+            # x1, y1 = midx - target_size//2, midy - target_size//2
+            # x2, y2 = x1 + target_size, y1 + target_size
+            start_point = (y1, x1)
+            end_point = (y2, x2)
+            color = (0, 255, 0)
+            thickness = 5
+            image = cv2.rectangle(image, start_point, end_point, color, thickness)
+            roi = image[x1:x2, y1:y2]
+            print(np.amax(image), np.amin(image), np.amax(roi), np.amin(roi))
+            image = np.rot90(image, k=3)
+            plt.imsave(save_analysis_path + "/original_" + test_image_name, image, cmap="gray")
+            plt.imsave(save_analysis_path + "/original_part_" + test_image_name, roi, cmap="gray")
+
+            log("Successfully save original.")
+
+
 
 logclose()
 

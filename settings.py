@@ -6,10 +6,10 @@ prototype_activation_function = 'log'
 add_on_layers_type = 'regular'
 
 experiment_run = 'PPNETLesionOrNot0229'
-data_path = "/usr/project/xtmp/mammo/binary_Feb/"
-train_dir = data_path + 'lesion_or_not_augmented/'
-test_dir = data_path + 'lesion_or_not_test/'
-train_push_dir = data_path + 'lesion_or_not/'
+data_path = "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/"
+train_dir = data_path + 'binary_train_spiculated_augmented_crazy/'
+test_dir = data_path + 'binary_test_spiculated/'
+train_push_dir = data_path + 'binary_train_spiculated/'
 
 class_specific = False
 

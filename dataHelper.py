@@ -41,6 +41,16 @@ def random_flip(input, axis):
     else:
         return input
 
+def random_crop(input):
+    ran = random.random()
+    if ran > 0.2:
+        # find a random place to be the left upper corner of the crop
+        rx = int(random.random() * input.shape[0] // 10)
+        ry = int(random.random() * input.shape[1] // 10)
+        return input[rx : rx + int(input.shape[0] * 9 // 10), ry : ry + int(input.shape[1] * 9 // 10)]
+    else:
+        return input
+
 
 def random_rotate_90(input):
     ran = random.random()
@@ -56,10 +66,10 @@ def random_shift(input, axis, range):
 
 def random_rotation(x, chance):
     ran = random.random()
-    if ran > chance:
+    if ran > 1- chance:
         # create black edges
         angle = np.random.randint(0, 360)
-        return rotate(x, angle=angle, reshape=False)
+        return rotate(x, angle=angle, reshape=True)
     else:
         return x
 
@@ -220,13 +230,26 @@ def dataAugNumpy(path, targetNumber, targetDir):
             for file in files:
                 filepath = os.path.join(root, file)
                 arr = np.load(filepath)
-                arr = random_flip(arr, 0)
-                arr = random_flip(arr, 1)
-                arr = random_rotate_90(arr)
-                arr = random_rotate_90(arr)
-                arr = random_rotate_90(arr)
-                np.save(targetDir + class1 + "/" + str(count) + ".npy", arr)
-                count += 1
+                try:
+                    arr = random_crop(arr)
+                    arr = random_rotation(arr, 0.9)
+                    arr = random_flip(arr, 0)
+                    arr = random_flip(arr, 1)
+                    arr = random_rotate_90(arr)
+                    arr = random_rotate_90(arr)
+                    arr = random_rotate_90(arr)
+                    # arr = random_rotation(arr, 0.9)
+                    if count %150 == 0:
+                        if not os.path.exists("./visualizations_of_augmentation/" + class2 + class1 + "/"):
+                            os.makedirs("./visualizations_of_augmentation/" + class2 + class1 + "/")
+                        imsave("./visualizations_of_augmentation/" + class2 + class1 + "/"+str(count), arr, cmap="gray")
+                    np.save(targetDir + class1 + "/" + str(count) + ".npy", arr)
+                    count += 1
+                    print(count)
+                except:
+                    if not os.path.exists("./error_of_augmentation/" + class2 + "/"):
+                        os.makedirs("./error_of_augmentation/" + class2 + "/")
+                    np.save("./error_of_augmentation/" + class2 + "/" + str(count), arr)
                 if count > targetNumber:
                     break
     print(count)
@@ -236,40 +259,63 @@ def dataAugNumpy(path, targetNumber, targetDir):
             for file in files:
                 filepath = os.path.join(root, file)
                 arr = np.load(filepath)
-                arr = random_flip(arr, 0)
-                arr = random_flip(arr, 1)
-                arr = random_rotate_90(arr)
-                arr = random_rotate_90(arr)
-                arr = random_rotate_90(arr)
-                np.save(targetDir + class2 + "/" + str(count) + ".npy", arr)
-                count += 1
+                try:
+                    arr = random_rotation(arr, 0.9)
+                    arr = random_flip(arr, 0)
+                    arr = random_flip(arr, 1)
+                    arr = random_rotate_90(arr)
+                    arr = random_rotate_90(arr)
+                    arr = random_rotate_90(arr)
+                    # arr = random_rotation(arr, 0.9)
+                    if count %150 == 0:
+                        if not os.path.exists("./visualizations_of_augmentation/" + class2 + "/"):
+                            os.makedirs("./visualizations_of_augmentation/" + class2 + "/")
+                        imsave("./visualizations_of_augmentation/" + class2 + "/"+str(count), arr,cmap="gray")
+                    np.save(targetDir + class2 + "/" + str(count) + ".npy", arr)
+                    count += 1
+                except:
+                    if not os.path.exists("./error_of_augmentation/" + class2 + "/"):
+                        os.makedirs("./error_of_augmentation/" + class2 + "/")
+                    np.save("./error_of_augmentation/" + class2 + "/" + str(count), arr)
+
                 if count > targetNumber:
                     break
     print(count)
 
 
-def cropROI(target):
+def window_adjustment(wwidth, wcen):
+    if wcen==2047 and wwidth==4096:
+        return wwidth, wcen
+    else:
+        new_wcen = np.random.randint(-100, 300)
+        new_wwidth = np.random.randint(-200, 300)
+        return new_wwidth, new_wcen
+
+
+def cropROI(target, augByWindow=False, numAugByWin=5):
     """Crops out the ROI of the image as defined in the spreadsheet provided by Yinhao."""
     # df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
-    df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
+    df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
     # classes = df["Class"]
     locations = df['Box_List']
     win_width = df['Win_Width']
     win_cen = df['Win_Center']
     names = list(df["File_Name"])
     did = set()
+    if augByWindow:
+        target = target[:-1] + "_augByWin/"
     count, max_shape0, max_shape1 = 0, 0, 0
     avg_shape0, avg_shape1 = 0, 0
     file_count = 0
     for root, dir, files in os.walk(
-            "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/test/"):
+            "/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/"):
         for file in files:
             file_count += 1
             # find the index of the name
             path = os.path.join(root, file)
             name_list = file.split("_")
-#            name = "_".join([name_list[-5][-2:]] + name_list[-4:])
-            name = "_".join([name_list[-4][-5:]] + name_list[-3:])
+            name = "_".join([name_list[-5][-2:]] + name_list[-4:])
+#            name = "_".join([name_list[-4][-5:]] + name_list[-3:])
             name = name[:-4] + ".png"
             # name = file[:-4]
             if name in did:
@@ -299,61 +345,101 @@ def cropROI(target):
             # ds = dcm.read_file(path)
             # image = ds.pixel_array
 
-            wwidth = np.asarray(ast.literal_eval(win_width[i])).max()
-            wcen = np.median(np.asarray(ast.literal_eval(win_cen[i])))
+            if augByWindow:
+                for k in range(numAugByWin):
+                    wwidth = np.asarray(ast.literal_eval(win_width[i])).max()
+                    wcen = np.median(np.asarray(ast.literal_eval(win_cen[i])))
 
-            image = ((image - wcen) / wwidth) + 0.5
-            image = np.clip(image, 0, 1)
+                    wwidth, wcen = window_adjustment(wwidth, wcen)
 
-            # make sure that we are looking at Mass but not Calc
-            # class_ = classinfo.split(",")
-            # mass_index = []  # which pair of ROI is mass
-            # for p, c_ in enumerate(class_):
-            #     if c_ == "Mass":
-            #         mass_index.append(p)
+                    image = ((image - wcen) / wwidth) + 0.5
+                    image = np.clip(image, 0, 1)
 
-            # read the location
-            location = locations[i]
-            j, curr, temp = 0, "", []
-            while j < len(location):
-                if location[j] in "1234567890":
-                    curr += location[j]
-                else:
-                    if curr:
-                        temp.append(int(curr))
-                        curr = ""
-                j += 1
-            location = temp
-            if len(location) % 4 != 0:
-                print("Failed because of Illegal location information ", location, " for name ", name)
-                continue
-            for j in range(len(location) // 4):
-                # if j not in mass_index:
-                #     continue
-                x1, y1, x2, y2 = location[4 * j:4 * (j + 1)]
-                x1, y1, x2, y2 = max(0, min(x1, x2) - 100), max(0, min(y1, y2) - 100), \
-                                 min(image.shape[0], max(x1, x2) + 100), min(image.shape[1], max(y1, y2) + 100)
-                # x1, y1 = midx - target_size//2, midy - target_size//2
-                # x2, y2 = x1 + target_size, y1 + target_size
-                roi = image[x1:x2, y1:y2]
+                    # read the location
+                    location = locations[i]
+                    j, curr, temp = 0, "", []
+                    while j < len(location):
+                        if location[j] in "1234567890":
+                            curr += location[j]
+                        else:
+                            if curr:
+                                temp.append(int(curr))
+                                curr = ""
+                        j += 1
+                    location = temp
+                    if len(location) % 4 != 0:
+                        print("Failed because of Illegal location information ", location, " for name ", name)
+                        continue
+                    for j in range(len(location) // 4):
+                        # if j not in mass_index:
+                        #     continue
+                        x1, y1, x2, y2 = location[4 * j:4 * (j + 1)]
+                        x1, y1, x2, y2 = max(0, min(x1, x2) - 100), max(0, min(y1, y2) - 100), \
+                                         min(image.shape[0], max(x1, x2) + 100), min(image.shape[1], max(y1, y2) + 100)
+                        # x1, y1 = midx - target_size//2, midy - target_size//2
+                        # x2, y2 = x1 + target_size, y1 + target_size
+                        roi = image[x1:x2, y1:y2]
 
-                # print(roi.shape)
-                # np.save(target + margin + "/" + name[:-4] + "#" + str(j) + ".npy", roi)
-                np.save(target + name[:-4] + "#" + str(j) + ".npy", roi)
-                avg_shape0 += roi.shape[0]
-                avg_shape1 += roi.shape[1]
-                max_shape0 = max(max_shape0, roi.shape[0])
-                max_shape1 = max(max_shape1, roi.shape[1])
-                # Use pypng to write z as a color PNG.
-                # imsave(target + margin + "/" + name, roi)
-                # with open(target + margin + "/" + name, 'wb') as f:
-                ##writer = png.Writer(width=roi.shape[1], height=roi.shape[0], bitdepth=16)
-                ## Convert z to the Python list of lists expected by
-                ## the png writer.
-                # roi2list = roi.tolist()
-                # writer.write(f, roi2list)
-                count += 1
-                print("successfully saved ", name, " . Have saved ", count, " total, seen ", file_count, " files in total")
+                        # print(roi.shape)
+                        np.save(target + margin + "/" + name[:-4] + "#" + str(j) + "#" + str(k) + ".npy", roi)
+                        avg_shape0 += roi.shape[0]
+                        avg_shape1 += roi.shape[1]
+                        max_shape0 = max(max_shape0, roi.shape[0])
+                        max_shape1 = max(max_shape1, roi.shape[1])
+                        count += 1
+                        print("successfully saved ", name, " . Have saved ", count, " total, seen ", file_count, " files in total")
+
+            else:
+                wwidth = np.asarray(ast.literal_eval(win_width[i])).max()
+                wcen = np.median(np.asarray(ast.literal_eval(win_cen[i])))
+
+                image = ((image - wcen) / wwidth) + 0.5
+                image = np.clip(image, 0, 1)
+
+
+                # read the location
+                location = locations[i]
+                j, curr, temp = 0, "", []
+                while j < len(location):
+                    if location[j] in "1234567890":
+                        curr += location[j]
+                    else:
+                        if curr:
+                            temp.append(int(curr))
+                            curr = ""
+                    j += 1
+                location = temp
+                if len(location) % 4 != 0:
+                    print("Failed because of Illegal location information ", location, " for name ", name)
+                    continue
+                for j in range(len(location) // 4):
+                    # if j not in mass_index:
+                    #     continue
+                    x1, y1, x2, y2 = location[4 * j:4 * (j + 1)]
+                    x1, y1, x2, y2 = max(0, min(x1, x2) - 100), max(0, min(y1, y2) - 100), \
+                                     min(image.shape[0], max(x1, x2) + 100), min(image.shape[1], max(y1, y2) + 100)
+                    # x1, y1 = midx - target_size//2, midy - target_size//2
+                    # x2, y2 = x1 + target_size, y1 + target_size
+                    roi = image[x1:x2, y1:y2]
+
+                    # print(roi.shape)
+                    # np.save(target + margin + "/" + name[:-4] + "#" + str(j) + ".npy", roi)
+                    np.save(target + name[:-4] + "#" + str(j) + "#" + str(j) + ".npy", roi)
+                    avg_shape0 += roi.shape[0]
+                    avg_shape1 += roi.shape[1]
+                    max_shape0 = max(max_shape0, roi.shape[0])
+                    max_shape1 = max(max_shape1, roi.shape[1])
+                    # Use pypng to write z as a color PNG.
+                    # imsave(target + margin + "/" + name, roi)
+                    # with open(target + margin + "/" + name, 'wb') as f:
+                    ##writer = png.Writer(width=roi.shape[1], height=roi.shape[0], bitdepth=16)
+                    ## Convert z to the Python list of lists expected by
+                    ## the png writer.
+                    # roi2list = roi.tolist()
+                    # writer.write(f, roi2list)
+                    count += 1
+                    print("successfully saved ", name, " . Have saved ", count, " total, seen ", file_count,
+                          " files in total")
 
     print(max_shape0, max_shape1)
     print(avg_shape0 / count, avg_shape1 / count)
@@ -482,7 +568,6 @@ def move_to_binary(pos, before, target):
         for file in files:
             path = os.path.join(root, file)
             if path in seen:
-                print("seen ", path_list)
                 continue
             else:
                 data = np.load(path)
@@ -510,26 +595,20 @@ def visualize(path):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-gpuid', nargs=1, type=str, default='0')  # python3 main.py -gpuid=1,2,3
-    args = parser.parse_args()
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid[0]
-    print(os.environ['CUDA_VISIBLE_DEVICES'])
-
-    # cropROI("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/lesion/")
+    # cropROI("/usr/project/xtmp/mammo/binary_Feb/train_context_roi/", augByWindow=True)
     # crop_negative_patches("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/allneg/")
-    #cleanup("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/")
-    #cleanup("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not/")
-    dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not/", 2000, "/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_augmented/")
-    # for margin in ["circumscribed", "obscured", "microlobulated", "spiculated", "indistinct"]:
-    #     cleanup("/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/normalized_rois/binary_context_roi/"
-    #             "binary_train_" + margin + "_augmented/other/")
+    # cleanup("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/")
+    # cleanup("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not/")
+    # dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not/", 30000, "/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_augmented_more/")
+    for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
+        dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 50000,
+                "binary_train_" + margin + "_augmented_crazy/")
 
     # for pos in ["circumscribed","indistinct", "microlobulated", "obscured", "spiculated"]:
-    #     for t in ["train", "test"]:
-    #          move_to_binary(pos, "/usr/project/xtmp/mammo/binary_Feb/"+ t + "_context_roi/",
+    #     for t in ["train"]:
+    #          move_to_binary(pos, "/usr/project/xtmp/mammo/binary_Feb/"+ t + "_context_roi_augByWin/",
     #                         "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_" + t + "_"
-    #                         + pos + "/")
+    #                         + pos + "_augmented_by_win/")
 
     # print("start data augmenting")
     # for pos in ["circumscribed", "indistinct", "microlobulated", "obscured", "spiculated"]:
