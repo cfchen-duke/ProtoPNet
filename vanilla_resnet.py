@@ -19,7 +19,7 @@ test_dir = "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_sp
 # train set
 train_dataset = DatasetFolder(
     train_dir,
-    augmentation=True,
+    augmentation=False,
     loader=np.load,
     extensions=("npy",),
     transform = transforms.Compose([
@@ -46,7 +46,7 @@ testloader = torch.utils.data.DataLoader(
 device = torch.device("cuda" if torch.cuda.is_available()
                                   else "cpu")
 
-model = models.resnet34(pretrained=True)
+model = models.resnet152(pretrained=True)
 for param in model.parameters():
     param.requires_grad = False
 

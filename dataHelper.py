@@ -120,8 +120,7 @@ class DatasetFolder(datasets.DatasetFolder):
         # for i in range(3):
         #     temp += [sample-mean[i] / std[i]]
 
-        # sample = random_flip(sample, 0)
-        # sample = random_flip(sample, 1)
+        # print("before transform", sample.shape)
         if self.augment:
             sample = random_rotation(sample, 0.7)
         temp = []
@@ -136,7 +135,7 @@ class DatasetFolder(datasets.DatasetFolder):
             sample = self.transform(n)
         if self.target_transform is not None:
             target = self.target_transform(target)
-
+        # print("after transform", sample.shape)
         return sample.float(), target, patient_id
 
 
@@ -289,13 +288,15 @@ def window_adjustment(wwidth, wcen):
     else:
         new_wcen = np.random.randint(-100, 300)
         new_wwidth = np.random.randint(-200, 300)
-        return new_wwidth, new_wcen
+        wwidth += new_wwidth
+        wcen += new_wcen
+        return wwidth, wcen
 
 
 def cropROI(target, augByWindow=False, numAugByWin=5):
     """Crops out the ROI of the image as defined in the spreadsheet provided by Yinhao."""
+    df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
     # df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
-    df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
     # classes = df["Class"]
     locations = df['Box_List']
     win_width = df['Win_Width']
@@ -308,16 +309,15 @@ def cropROI(target, augByWindow=False, numAugByWin=5):
     avg_shape0, avg_shape1 = 0, 0
     file_count = 0
     for root, dir, files in os.walk(
-            "/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/"):
+            "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/train/"):
         for file in files:
             file_count += 1
             # find the index of the name
             path = os.path.join(root, file)
             name_list = file.split("_")
-            name = "_".join([name_list[-5][-2:]] + name_list[-4:])
-#            name = "_".join([name_list[-4][-5:]] + name_list[-3:])
+            # name = "_".join([name_list[-5][-2:]] + name_list[-4:])
+            name = "_".join([name_list[-4][-5:]] + name_list[-3:])
             name = name[:-4] + ".png"
-            # name = file[:-4]
             if name in did:
                 print("already seen ", name)
                 continue
@@ -326,7 +326,7 @@ def cropROI(target, augByWindow=False, numAugByWin=5):
             else:
                 print("failed to find ", name)
                 continue
-
+            raise
             # find the class of the file
             margin = path.split("/")[-2]
             if not os.path.exists(target + margin):
@@ -423,8 +423,8 @@ def cropROI(target, augByWindow=False, numAugByWin=5):
                     roi = image[x1:x2, y1:y2]
 
                     # print(roi.shape)
-                    # np.save(target + margin + "/" + name[:-4] + "#" + str(j) + ".npy", roi)
-                    np.save(target + name[:-4] + "#" + str(j) + "#" + str(j) + ".npy", roi)
+                    np.save(target + margin + "/" + name[:-4] + "#" + str(j) + ".npy", roi)
+                    # np.save(target + name[:-4] + "#" + str(j) + "#" + str(j) + ".npy", roi)
                     avg_shape0 += roi.shape[0]
                     avg_shape1 += roi.shape[1]
                     max_shape0 = max(max_shape0, roi.shape[0])
@@ -595,14 +595,14 @@ def visualize(path):
 
 
 if __name__ == "__main__":
-    # cropROI("/usr/project/xtmp/mammo/binary_Feb/train_context_roi/", augByWindow=True)
+    cropROI("/usr/project/xtmp/mammo/binary_Feb/train_context_roi/", augByWindow=True)
     # crop_negative_patches("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/allneg/")
     # cleanup("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/")
     # cleanup("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not/")
     # dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not/", 30000, "/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_augmented_more/")
-    for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
-        dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 50000,
-                "binary_train_" + margin + "_augmented_crazy/")
+    # for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
+    #     dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 50000,
+    #             "binary_train_" + margin + "_augmented_crazy/")
 
     # for pos in ["circumscribed","indistinct", "microlobulated", "obscured", "spiculated"]:
     #     for t in ["train"]:
@@ -617,13 +617,3 @@ if __name__ == "__main__":
     #         + pos + "/", 1000 ,
     #         "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_"
     #         + pos + "_augmented/")
-#    cleanup("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented/")
-#    cleanup("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated/")
-#    cleanup("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/")
-
-#    visualize("/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/normalized_rois/binary_context_roi/binary_train_spiculated/spiculated/JMBMV_2_RMLO_D0.npy")
-#
-# /usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/normalized_rois/binary_context_roi/binary_train_spiculated/spiculated/JMBMR_13_LMLO_D-3.npy
-# /usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/normalized_rois/binary_context_roi/binary_train_spiculated/spiculated/JMBMR_5_LCC_D-3.npy
-# /usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/normalized_rois/binary_context_roi/binary_train_spiculated/spiculated/JMBMV_2_RMLO_D0.npy
-# /usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/normalized_rois/binary_context_roi/binary_train_spiculated/spiculated/JMBMV_6_RCC_D0.npy
