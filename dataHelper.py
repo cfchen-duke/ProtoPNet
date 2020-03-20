@@ -171,44 +171,33 @@ def dataAugmentation(in_dir, out_dir, num_of_sample):
 
 def cleanup(dir):
     """
-    throw out all the images that has over 40% black
+    throw out all the images that has over 80% black, 80% white, and size smaller than 10kb
     :param dir: the dir to clean
     :return: None
     """
     removed = 0
+    if not os.path.exists("/usr/xtmp/ct214/removed/"):
+        os.mkdir("/usr/xtmp/ct214/removed/")
     for root, dir, files in os.walk(dir):
         for file in files:
             if "png" in file:
                 path = os.path.join(root, file)
                 image = imread(path)
-                black = 0
-                for i in range(image.shape[0]):
-                    for j in range(image.shape[1]):
-                        if image[i][j] == 0:
-                            black += 1
-                if black >= image.shape[0] * image.shape[1] * 0.4:
-                    imsave("/usr/xtmp/ct214/removed/" + file + ".png", image)
+                black = image.shape[0] * image.shape[1] - np.count_nonzero(image)
+                whites = image.shape[0] * image.shape[1] - np.count_nonzero(np.round(image - np.amax(image), 4))
+                if image.shape[0] < 10 or image.shape[1] < 10 or black >= image.shape[0] * image.shape[1] * 0.8 or \
+                        whites >= image.shape[0] * image.shape[1] * 0.8 or os.path.getsize(path)/1024 < 10:
+                    imsave("/usr/xtmp/ct214/removed/" + file[:-4], image)
                     os.remove(path)
                     print("file removed!")
             if "npy" in file:
                 path = os.path.join(root, file)
                 image = np.load(path)
-                black = 0
-                if image.shape[0] < 10 or image.shape[1] < 10:
-                    if not os.path.exists("/usr/xtmp/ct214/removed/"):
-                        os.mkdir("/usr/xtmp/ct214/removed/")
-                    np.save("/usr/xtmp/ct214/removed/" + file, image)
-                    os.remove(path)
-                    removed += 1
-                    continue
-                for i in range(image.shape[0]):
-                    for j in range(image.shape[1]):
-                        if image[i][j] == 0:
-                            black += 1
-                if black >= image.shape[0] * image.shape[1] * 0.4:
-                    if not os.path.exists("/usr/xtmp/ct214/removed/"):
-                        os.mkdir("/usr/xtmp/ct214/removed/")
-                    np.save("/usr/xtmp/ct214/removed/" + file, image)
+                whites = image.shape[0] * image.shape[1] - np.count_nonzero(np.round(image - np.amax(image), 4))
+                black = image.shape[0] * image.shape[1] - np.count_nonzero(image)
+                if image.shape[0] < 10 or image.shape[1] < 10 or black >= image.shape[0] * image.shape[1] * 0.8 or \
+                        whites >= image.shape[0] * image.shape[1] * 0.8 or os.path.getsize(path)/1024 < 10:
+                    imsave("/usr/xtmp/ct214/removed/" + file[:-4], image)
                     os.remove(path)
                     removed += 1
                     print("file removed!")
@@ -238,7 +227,7 @@ def dataAugNumpy(path, targetNumber, targetDir):
                     arr = random_rotate_90(arr)
                     arr = random_rotate_90(arr)
                     # arr = random_rotation(arr, 0.9)
-                    if count %150 == 0:
+                    if count %1500 == 0:
                         if not os.path.exists("./visualizations_of_augmentation/" + class2 + class1 + "/"):
                             os.makedirs("./visualizations_of_augmentation/" + class2 + class1 + "/")
                         imsave("./visualizations_of_augmentation/" + class2 + class1 + "/"+str(count), arr, cmap="gray")
@@ -295,8 +284,10 @@ def window_adjustment(wwidth, wcen):
 
 def cropROI(target, augByWindow=False, numAugByWin=5):
     """Crops out the ROI of the image as defined in the spreadsheet provided by Yinhao."""
-    df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
-    # df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
+    # df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
+    df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
+    # datapath = "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/train/"
+    datapath = "/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/"
     # classes = df["Class"]
     locations = df['Box_List']
     win_width = df['Win_Width']
@@ -308,15 +299,15 @@ def cropROI(target, augByWindow=False, numAugByWin=5):
     count, max_shape0, max_shape1 = 0, 0, 0
     avg_shape0, avg_shape1 = 0, 0
     file_count = 0
-    for root, dir, files in os.walk(
-            "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/train/"):
+    for root, dir, files in os.walk(datapath):
         for file in files:
             file_count += 1
             # find the index of the name
             path = os.path.join(root, file)
             name_list = file.split("_")
-            # name = "_".join([name_list[-5][-2:]] + name_list[-4:])
             name = "_".join([name_list[-4][-5:]] + name_list[-3:])
+            if len(name.split("_")[0]) != 5:
+                name = "_".join([name_list[-5][-2:]] + name_list[-4:])
             name = name[:-4] + ".png"
             if name in did:
                 print("already seen ", name)
@@ -326,7 +317,6 @@ def cropROI(target, augByWindow=False, numAugByWin=5):
             else:
                 print("failed to find ", name)
                 continue
-            raise
             # find the class of the file
             margin = path.split("/")[-2]
             if not os.path.exists(target + margin):
@@ -595,18 +585,17 @@ def visualize(path):
 
 
 if __name__ == "__main__":
-    cropROI("/usr/project/xtmp/mammo/binary_Feb/train_context_roi/", augByWindow=True)
+    # cropROI("/usr/project/xtmp/mammo/binary_Feb/train_context_roi/", augByWindow=True)
     # crop_negative_patches("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/allneg/")
-    # cleanup("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/")
-    # cleanup("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not/")
+    cleanup("/usr/project/xtmp/ct214/Research_Mammo/Forked_PPNet/ProtoPNet/binary_train_spiculated_augmented_crazy/")
     # dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/lesion_or_not/", 30000, "/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_augmented_more/")
     # for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
     #     dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 50000,
-    #             "binary_train_" + margin + "_augmented_crazy/")
+    #             "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_crazy/")
 
     # for pos in ["circumscribed","indistinct", "microlobulated", "obscured", "spiculated"]:
     #     for t in ["train"]:
-    #          move_to_binary(pos, "/usr/project/xtmp/mammo/binary_Feb/"+ t + "_context_roi_augByWin/",
+    #          move_to_binary(pos, "/usr/project/xtmp/mammo/binary_Feb/"+ t + "_context_roi/",
     #                         "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_" + t + "_"
     #                         + pos + "_augmented_by_win/")
 

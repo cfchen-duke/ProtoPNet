@@ -5,4 +5,4 @@ source /home/home2/ct214/virtual_envs/ml/bin/activate
 echo "start running"
 nvidia-smi
 
-srun -u python main.py -latent=32 -experiment_run="PPNETSpiculated0318_32"
+srun -u python main.py -latent=1024 -experiment_run="PPNETSpiculated0319_1024"
