@@ -12,12 +12,11 @@ args = parser.parse_args()
 image_names = args.image[0]
 
 for image_name in image_names.split(" "):
-    test_dir = "./binary_train_spiculated_augmented_crazy/spiculated/" + image_name
+    test_dir = "/usr/project/xtmp/mammo/binary_Feb/train_context_roi_augByWin/spiculated/" + image_name
     arr = np.load(test_dir)
     print(arr.shape)
     print("Non zero count is " , np.count_nonzero(arr))
     plt.imsave("visualization " + image_name[:-4], arr, cmap="gray")
-    print(np.round(arr[100:110, 100:110]- np.amax(arr),4))
     whites =  arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr - np.amax(arr), 4))
     print("white count is ", whites)
     print(arr.shape[0] * arr.shape[1] * 0.5)

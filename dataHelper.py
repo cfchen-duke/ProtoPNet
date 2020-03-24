@@ -8,6 +8,7 @@ import random
 import png
 from matplotlib.pyplot import imsave, imread
 import matplotlib
+from PIL import Image
 matplotlib.use("Agg")
 import torchvision.datasets as datasets
 from scipy.ndimage import rotate
@@ -66,12 +67,14 @@ def random_shift(input, axis, range):
 
 def random_rotation(x, chance):
     ran = random.random()
+    img = Image.fromarray(x)
     if ran > 1- chance:
         # create black edges
-        angle = np.random.randint(0, 360)
-        return rotate(x, angle=angle, reshape=True)
+        angle = np.random.randint(0, 90)
+        img = img.rotate(angle=angle, expand=1)
+        return np.asarray(img)
     else:
-        return x
+        return np.asarray(img)
 
 
 class DatasetFolder(datasets.DatasetFolder):
