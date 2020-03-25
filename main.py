@@ -165,9 +165,9 @@ for epoch in range(num_train_epochs):
                       class_specific=class_specific, coefs=coefs, log=log)
     else:
         tnt.joint(model=ppnet_multi, log=log)
-        joint_lr_scheduler.step()
         _ = tnt.train(model=ppnet_multi, dataloader=train_loader, optimizer=joint_optimizer,
                       class_specific=class_specific, coefs=coefs, log=log)
+        joint_lr_scheduler.step()
 
     auc = tnt.test(model=ppnet_multi, dataloader=test_loader,
                     class_specific=class_specific, log=log)

@@ -10,11 +10,15 @@ from sklearn.metrics import roc_auc_score
 
 
 
-train_dir = "./binary_train_spiculated_augmented_crazy/"
-test_dir = "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/"
+# train_dir = "./binary_train_spiculated_augmented_crazy/"
+# test_dir = "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/"
 #
 # train_dir = "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/normalized_rois/binary_context_roi/binary_train_spiculated_augmented/"
 # test_dir = "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/normalized_rois/binary_context_roi/binary_test_spiculated/"
+
+train_dir = "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented/"
+test_dir = "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/"
+
 
 # train set
 train_dataset = DatasetFolder(
