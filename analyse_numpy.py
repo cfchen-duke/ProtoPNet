@@ -12,7 +12,7 @@ args = parser.parse_args()
 image_names = args.image[0]
 
 for image_name in image_names.split(" "):
-    test_dir = "/usr/project/xtmp/ct214/Research_Mammo/Forked_PPNet/ProtoPNet/binary_train_spiculated_augmented_crazy/spiculated/" + image_name
+    test_dir = "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented/spiculated/" + image_name
     arr = np.load(test_dir)
     print(arr.shape)
     print("Non zero count is " , np.count_nonzero(arr))
