@@ -16,7 +16,7 @@ from sklearn.metrics import roc_auc_score
 # train_dir = "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/normalized_rois/binary_context_roi/binary_train_spiculated_augmented/"
 # test_dir = "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/normalized_rois/binary_context_roi/binary_test_spiculated/"
 
-train_dir = "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented/"
+train_dir = "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated/"
 test_dir = "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/"
 
 
@@ -50,15 +50,17 @@ testloader = torch.utils.data.DataLoader(
 device = torch.device("cuda" if torch.cuda.is_available()
                                   else "cpu")
 
-model = models.resnet152(pretrained=True)
+model = models.vgg16(pretrained=True)
 for param in model.parameters():
     param.requires_grad = False
 
-model.fc = nn.Sequential(nn.Linear(2048, 512),
-                         nn.ReLU(),
-                         nn.Dropout(0.5),
-                         nn.Linear(512, 2),
-                         nn.LogSoftmax(dim=1))
+model.fc = nn.Sequential(nn.Linear(512 * 7 * 7, 4096),
+                         nn.ReLU(True),
+                        nn.Dropout(),
+                        nn.Linear(4096, 4096),
+                        nn.ReLU(True),
+                        nn.Dropout(),
+                        nn.Linear(4096, 2),)
 
 criterion = nn.NLLLoss()
 optimizer = optim.Adam(model.fc.parameters(), lr=1e-3)
