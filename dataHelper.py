@@ -13,6 +13,7 @@ matplotlib.use("Agg")
 import torchvision.datasets as datasets
 from skimage.transform import resize
 import ast
+import pydicom as dcm
 import Augmentor
 
 
@@ -230,8 +231,8 @@ def dataAugNumpy(path, targetNumber, targetDir):
                     arr = random_rotate_90(arr)
                     # arr = random_rotation(arr, 0.9)
 
-                    whites = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr - np.amax(arr), 4))
-                    black = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr, 3))
+                    whites = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr - np.amax(arr), 2))
+                    black = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr, 2))
                     if arr.shape[0] < 10 or arr.shape[1] < 10 or black >= arr.shape[0] * arr.shape[1] * 0.8 or \
                             whites >= arr.shape[0] * arr.shape[1] * 0.8:
                         print("illegal content")
@@ -265,8 +266,8 @@ def dataAugNumpy(path, targetNumber, targetDir):
                     arr = random_rotate_90(arr)
                     # arr = random_rotation(arr, 0.9)
 
-                    whites = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr - np.amax(arr), 4))
-                    black = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr, 3))
+                    whites = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr - np.amax(arr), 2))
+                    black = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr, 2))
                     if arr.shape[0] < 10 or arr.shape[1] < 10 or black >= arr.shape[0] * arr.shape[1] * 0.8 or \
                             whites >= arr.shape[0] * arr.shape[1] * 0.8:
                         print("illegal content")
@@ -582,13 +583,38 @@ def move_to_binary(pos, before, target):
                 count += 1
                 print("successfully saved ", file_name, " . Have saved ", count, " total for neg: " + pos)
 
+
+def DOI_moving_helper(positive_class, arr):
+    base_dir = "/usr/xtmp/mammo/binary_Feb/binary_context_roi/"
+
 def move_DOI_to_training():
     df = pd.read_excel("/usr/project/xtmp/ct214/DOI-mass-ROI/mass.xlsx")
-    margin = df["mass margins"]
-    roi_name = [s.split("/")[0] for s in df["cropped image file path"]]
+    margins = df["mass margins"]
+    roi_names = [s.split("/")[0] for s in df["cropped image file path"]]
+    seen = set()
     for root, dirs, files in os.walk("/usr/project/xtmp/ct214/DOI-mass-ROI/"):
         for file in files:
             path = os.path.join(root, file)
+            name = path.split("/")[-4]
+            if name in roi_names:
+                index = roi_names.index(name)
+            else:
+                continue
+            margin = margins[index]
+
+            # find save directory
+            # first detect spiculated, then circumscribed, then obscured, then microlobulated, then ill-defined, then other
+            if "SPICULATED" in margin:
+                save_dir = "/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_by_win/spiculated/"
+            else:
+                save_dir = "/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_by_win/allneg/"
+
+
+            # read in dcm files
+            ds = dcm.read_file(path)
+            image = ds.pixel_array
+
+
 
 
 if __name__ == "__main__":
@@ -598,9 +624,9 @@ if __name__ == "__main__":
     #         datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/test/")
     # crop_negative_patches("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/", datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/")
     # cleanup("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_crazy/")
-    for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
-        dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 1000,
-                "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/test_" + margin + "_temp/")
+    # for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
+    #     dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 10000,
+    #             "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_more_with_rot/")
 
     # for pos in ["circumscribed","indistinct", "microlobulated", "obscured", "spiculated"]:
     #     for t in ["train", "test"]:
@@ -615,3 +641,4 @@ if __name__ == "__main__":
     #         + pos + "/", 1000 ,
     #         "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_"
     #         + pos + "_augmented/")
+    move_DOI_to_training()

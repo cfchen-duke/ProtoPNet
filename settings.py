@@ -7,7 +7,7 @@ add_on_layers_type = 'regular'
 
 experiment_run = 'PPNETLesionOrNot0229'
 data_path = "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/"
-train_dir = data_path + 'binary_train_spiculated_augmented_more/'
+train_dir = data_path + 'binary_train_spiculated_augmented_more_with_rot/'
 # train_dir ='binary_train_spiculated_augmented_crazy/'
 test_dir = data_path + 'binary_test_spiculated/'
 train_push_dir = data_path + 'binary_train_spiculated/'
