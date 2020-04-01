@@ -50,19 +50,13 @@ testloader = torch.utils.data.DataLoader(
 device = torch.device("cuda" if torch.cuda.is_available()
                                   else "cpu")
 
-model = models.vgg16(pretrained=True)
+model = models.resnet34(pretrained=True)
 for param in model.parameters():
     param.requires_grad = False
 
-model.fc = nn.Sequential(nn.Linear(512 * 7 * 7, 4096),
-                         nn.ReLU(True),
-                        nn.Dropout(),
-                        nn.Linear(4096, 4096),
-                        nn.ReLU(True),
-                        nn.Dropout(),
-                        nn.Linear(4096, 2),)
+model.fc = nn.Sequential(nn.Linear(512,2),)
 
-criterion = nn.NLLLoss()
+criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.fc.parameters(), lr=1e-3)
 
 model.to(device)

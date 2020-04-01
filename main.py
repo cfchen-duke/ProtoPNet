@@ -27,18 +27,24 @@ parser.add_argument('-gpuid', nargs=1, type=str, default='0') # python3 main.py 
 parser.add_argument('-experiment_run', nargs=1, type=str, default='0')
 parser.add_argument("-latent", nargs=1, type=int, default=32)
 parser.add_argument("-model", type=str)
+parser.add_argument("-base", type=str)
 args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid[0]
 print(os.environ['CUDA_VISIBLE_DEVICES'])
 latent_shape = args.latent[0]
 experiment_run = args.experiment_run[0]
 load_model_dir = args.model
+base_architecture = args.base
 
 # book keeping namings and code
-from settings import base_architecture, img_size, prototype_shape, num_classes, \
+from settings import img_size, prototype_shape, num_classes, \
                      prototype_activation_function, add_on_layers_type
 
+if not base_architecture:
+    from settings import base_architecture
+
 base_architecture_type = re.match('^[a-z]*', base_architecture).group(0)
+
 prototype_shape = (prototype_shape[0], latent_shape, prototype_shape[2], prototype_shape[3])
 print(prototype_shape)
 
