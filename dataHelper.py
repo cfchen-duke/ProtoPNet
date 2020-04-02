@@ -59,7 +59,7 @@ def random_rotate_90(input):
         return np.rot90(input)
     else:
         return input
-
+      
 
 def random_shift(input, axis, range):
     ran = random.random()
@@ -607,6 +607,10 @@ def move_DOI_to_training():
             # first detect spiculated, then circumscribed, then obscured, then microlobulated, then ill-defined, then other
             if not margin or type(margin) != str:
                 continue
+
+            # find save directory
+            # first detect spiculated, then circumscribed, then obscured, then microlobulated, then ill-defined, then other
+
             if "SPICULATED" in margin:
                 save_dir = "/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_by_win/spiculated/"
             else:
@@ -615,7 +619,6 @@ def move_DOI_to_training():
             if name in seen:
                 continue
             seen.add(name)
-
             # read in dcm files
             ds = dcm.read_file(path)
             image = ds.pixel_array
@@ -629,6 +632,7 @@ def move_DOI_to_training():
 
 
 
+
 if __name__ == "__main__":
     # cropROI("/usr/project/xtmp/mammo/binary_Feb/train_context_roi_correct_DP/", augByWindow=False,
     #         datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/")
@@ -639,7 +643,12 @@ if __name__ == "__main__":
     for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
         dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 20000,
                 "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_morer_with_rot/")
+=======
+    # for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
+    #     dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 10000,
+    #             "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_more_with_rot/")
 
+    
     # for pos in ["circumscribed","indistinct", "microlobulated", "obscured", "spiculated"]:
     #     for t in ["train", "test"]:
     #          move_to_binary(pos, "/usr/project/xtmp/mammo/binary_Feb/"+ t + "_context_roi_correct_DP/",
@@ -653,4 +662,5 @@ if __name__ == "__main__":
     #         + pos + "/", 1000 ,
     #         "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_"
     #         + pos + "_augmented/")
-    # move_DOI_to_training()
+
+    move_DOI_to_training()

@@ -26,17 +26,25 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-gpuid', nargs=1, type=str, default='0') # python3 main.py -gpuid=0,1,2,3
 parser.add_argument('-experiment_run', nargs=1, type=str, default='0')
 parser.add_argument("-latent", nargs=1, type=int, default=32)
+parser.add_argument("-model", type=str)
+parser.add_argument("-base", type=str)
 args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid[0]
 print(os.environ['CUDA_VISIBLE_DEVICES'])
 latent_shape = args.latent[0]
 experiment_run = args.experiment_run[0]
+load_model_dir = args.model
+base_architecture = args.base
 
 # book keeping namings and code
-from settings import base_architecture, img_size, prototype_shape, num_classes, \
+from settings import img_size, prototype_shape, num_classes, \
                      prototype_activation_function, add_on_layers_type
 
+if not base_architecture:
+    from settings import base_architecture
+
 base_architecture_type = re.match('^[a-z]*', base_architecture).group(0)
+
 prototype_shape = (prototype_shape[0], latent_shape, prototype_shape[2], prototype_shape[3])
 print(prototype_shape)
 
@@ -109,12 +117,15 @@ log('test set size: {0}'.format(len(test_loader.dataset)))
 log('batch size: {0}'.format(train_batch_size))
 
 # construct the model
-ppnet = model.construct_PPNet(base_architecture=base_architecture,
-                              pretrained=True, img_size=img_size,
-                              prototype_shape=prototype_shape,
-                              num_classes=num_classes,
-                              prototype_activation_function=prototype_activation_function,
-                              add_on_layers_type=add_on_layers_type)
+if load_model_dir:
+    ppnet = torch.load(load_model_dir)
+else:
+    ppnet = model.construct_PPNet(base_architecture=base_architecture,
+                                  pretrained=True, img_size=img_size,
+                                  prototype_shape=prototype_shape,
+                                  num_classes=num_classes,
+                                  prototype_activation_function=prototype_activation_function,
+                                  add_on_layers_type=add_on_layers_type)
 #if prototype_activation_function == 'linear':
 #    ppnet.set_last_layer_incorrect_connection(incorrect_strength=0)
 ppnet = ppnet.cuda()
@@ -165,9 +176,9 @@ for epoch in range(num_train_epochs):
                       class_specific=class_specific, coefs=coefs, log=log)
     else:
         tnt.joint(model=ppnet_multi, log=log)
-        joint_lr_scheduler.step()
         _ = tnt.train(model=ppnet_multi, dataloader=train_loader, optimizer=joint_optimizer,
                       class_specific=class_specific, coefs=coefs, log=log)
+        joint_lr_scheduler.step()
 
     auc = tnt.test(model=ppnet_multi, dataloader=test_loader,
                     class_specific=class_specific, log=log)
