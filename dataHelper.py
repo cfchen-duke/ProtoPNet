@@ -59,7 +59,7 @@ def random_rotate_90(input):
         return np.rot90(input)
     else:
         return input
-
+      
 
 def random_shift(input, axis, range):
     ran = random.random()
@@ -592,6 +592,7 @@ def move_DOI_to_training():
     margins = df["mass margins"]
     roi_names = [s.split("/")[0] for s in df["cropped image file path"]]
     seen = set()
+    count = 0
     for root, dirs, files in os.walk("/usr/project/xtmp/ct214/DOI-mass-ROI/"):
         for file in files:
             path = os.path.join(root, file)
@@ -601,18 +602,33 @@ def move_DOI_to_training():
             else:
                 continue
             margin = margins[index]
+            # print(margin)
+            # find save directory
+            # first detect spiculated, then circumscribed, then obscured, then microlobulated, then ill-defined, then other
+            if not margin or type(margin) != str:
+                continue
 
             # find save directory
             # first detect spiculated, then circumscribed, then obscured, then microlobulated, then ill-defined, then other
+
             if "SPICULATED" in margin:
                 save_dir = "/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_by_win/spiculated/"
             else:
                 save_dir = "/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_by_win/allneg/"
 
-
+            if name in seen:
+                continue
+            seen.add(name)
             # read in dcm files
             ds = dcm.read_file(path)
             image = ds.pixel_array
+
+            # save to npy
+            np.save(save_dir + name[14:], image)
+            count += 1
+            print(count)
+    print("saved ", count, " images in total")
+            # print(name[14:])
 
 
 
@@ -624,10 +640,15 @@ if __name__ == "__main__":
     #         datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/test/")
     # crop_negative_patches("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/", datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/")
     # cleanup("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_crazy/")
+    for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
+        dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 20000,
+                "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_morer_with_rot/")
+=======
     # for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
     #     dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 10000,
     #             "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_more_with_rot/")
 
+    
     # for pos in ["circumscribed","indistinct", "microlobulated", "obscured", "spiculated"]:
     #     for t in ["train", "test"]:
     #          move_to_binary(pos, "/usr/project/xtmp/mammo/binary_Feb/"+ t + "_context_roi_correct_DP/",
@@ -641,4 +662,5 @@ if __name__ == "__main__":
     #         + pos + "/", 1000 ,
     #         "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_"
     #         + pos + "_augmented/")
+
     move_DOI_to_training()
