@@ -28,6 +28,7 @@ parser.add_argument('-experiment_run', nargs=1, type=str, default='0')
 parser.add_argument("-latent", nargs=1, type=int, default=32)
 parser.add_argument("-model", type=str)
 parser.add_argument("-base", type=str)
+parser.add_argument("-train_dir", type=str)
 args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid[0]
 print(os.environ['CUDA_VISIBLE_DEVICES'])
@@ -35,6 +36,7 @@ latent_shape = args.latent[0]
 experiment_run = args.experiment_run[0]
 load_model_dir = args.model
 base_architecture = args.base
+
 
 # book keeping namings and code
 from settings import img_size, prototype_shape, num_classes, \
@@ -70,6 +72,10 @@ from settings import train_dir, test_dir, train_push_dir, \
 
 normalize = transforms.Normalize(mean=mean,
                                  std=std)
+
+if args.train_dir:
+    print("inputting training dir")
+    train_dir = args.train_dir
 
 # all datasets
 # train set
@@ -220,7 +226,7 @@ for epoch in range(num_train_epochs):
 
         if prototype_activation_function != 'linear':
             tnt.last_only(model=ppnet_multi, log=log)
-            for i in range(20):
+            for i in range(10):
                 log('iteration: \t{0}'.format(i))
                 _ = tnt.train(model=ppnet_multi, dataloader=train_loader, optimizer=last_layer_optimizer,
                               class_specific=class_specific, coefs=coefs, log=log)

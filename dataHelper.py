@@ -588,12 +588,12 @@ def DOI_moving_helper(positive_class, arr):
     base_dir = "/usr/xtmp/mammo/binary_Feb/binary_context_roi/"
 
 def move_DOI_to_training():
-    df = pd.read_excel("/usr/project/xtmp/ct214/DOI-mass-ROI/mass.xlsx")
+    df = pd.read_csv("/usr/project/xtmp/ct214/CBIS-DDSM//mass.csv")
     margins = df["mass margins"]
     roi_names = [s.split("/")[0] for s in df["cropped image file path"]]
     seen = set()
     count = 0
-    for root, dirs, files in os.walk("/usr/project/xtmp/ct214/DOI-mass-ROI/"):
+    for root, dirs, files in os.walk("/usr/project/xtmp/ct214/CBIS-DDSM/"):
         for file in files:
             path = os.path.join(root, file)
             name = path.split("/")[-4]
@@ -606,6 +606,11 @@ def move_DOI_to_training():
             # find save directory
             # first detect spiculated, then circumscribed, then obscured, then microlobulated, then ill-defined, then other
             if not margin or type(margin) != str:
+                continue
+
+            # check file size -- only save file that is smaller than 500k
+            size = os.path.getsize(path)
+            if size > 500 * 1024:
                 continue
 
             # find save directory
@@ -639,11 +644,10 @@ if __name__ == "__main__":
     # cropROI("/usr/project/xtmp/mammo/binary_Feb/test_context_roi_correct_DP/", augByWindow=False,
     #         datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/test/")
     # crop_negative_patches("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/", datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/")
-    # cleanup("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_crazy/")
-    for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
-        dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 20000,
-                "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_morer_with_rot/")
-=======
+    # # cleanup("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_crazy/")
+    # for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
+    #     dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 50000,
+    #             "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_crazy_with_rot/")
     # for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
     #     dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 10000,
     #             "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_more_with_rot/")
