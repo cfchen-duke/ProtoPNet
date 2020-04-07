@@ -1,0 +1,167 @@
+import matplotlib
+import matplotlib.pyplot as plt
+from vgg_features import vgg11_features, vgg11_bn_features, vgg13_features, vgg13_bn_features, vgg16_features, vgg16_bn_features,\
+                         vgg19_features, vgg19_bn_features
+import argparse
+import torch.nn as nn
+from dataHelper import DatasetFolder
+from torchvision import transforms
+import torch
+from torch import optim
+import numpy as np
+from sklearn.metrics import roc_auc_score
+
+
+matplotlib.use("Agg")
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-model", type=str)
+parser.add_argument("-train_dir", type=str, default="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_morer_with_rot/")
+parser.add_argument("-test_dir", type=str, default="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/")
+args = parser.parse_args()
+model_name = args.model
+train_dir = args.train_dir
+test_dir = args.test_dir
+
+base_architecture_to_features = {'vgg11': vgg11_features,
+                                 'vgg11_bn': vgg11_bn_features,
+                                 'vgg13': vgg13_features,
+                                 'vgg13_bn': vgg13_bn_features,
+                                 'vgg16': vgg16_features,
+                                 'vgg16_bn': vgg16_bn_features,
+                                 'vgg19': vgg19_features,
+                                 'vgg19_bn': vgg19_bn_features}
+
+features = base_architecture_to_features[model_name](pretrained=True)
+
+# build model
+class Vanilla_VGG(nn.Module):
+    def __init__(self, myfeatures):
+        super(Vanilla_VGG, self).__init__()
+
+        self.features = myfeatures
+        self.avgpool = nn.AdaptiveAvgPool2d((7,7))
+        self.classifier = nn.Sequential(
+            nn.Linear(512*7*7, 4096),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(4096, 1024),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(1024, 2),
+            nn.LogSoftmax(dim=0)
+        )
+
+
+    def forward(self, x):
+        x = self.features(x)
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
+        return x
+
+
+model = Vanilla_VGG(features)
+
+# load data
+# train set
+train_dataset = DatasetFolder(
+    train_dir,
+    augmentation=False,
+    loader=np.load,
+    extensions=("npy",),
+    transform = transforms.Compose([
+        torch.from_numpy,
+    ]))
+trainloader = torch.utils.data.DataLoader(
+    train_dataset, batch_size=100, shuffle=True,
+    num_workers=4, pin_memory=False)
+
+# test set
+test_dataset =DatasetFolder(
+    test_dir,
+    loader=np.load,
+    extensions=("npy",),
+    transform = transforms.Compose([
+        torch.from_numpy,
+    ]))
+testloader = torch.utils.data.DataLoader(
+    test_dataset, batch_size=100, shuffle=False,
+    num_workers=4, pin_memory=False)
+
+
+# start training
+epochs = 1000
+
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=1e-4)
+
+device = torch.device("cuda")
+model.to(device)
+
+train_losses = []
+test_losses = []
+curr_best = 0
+
+
+for epoch in range(epochs):
+    # train
+    total_output = []
+    total_one_hot_label  = []
+    running_loss = 0
+    model.train()
+    for inputs, labels, id in trainloader:
+        inputs, labels = inputs.to(device), labels.to(device)
+        optimizer.zero_grad()
+        logps = model.forward(inputs)
+        loss = criterion(logps, labels)
+        loss.backward()
+        optimizer.step()
+        running_loss += loss.item()
+        one_hot_label = np.zeros(shape=(len(labels), 2))
+        for k in range(len(labels)):
+            one_hot_label[k][labels[k].item()] = 1
+        # roc_auc_score()
+        total_output.extend(logps.cpu().detach().numpy())
+        total_one_hot_label.extend(one_hot_label)
+    auc_score = roc_auc_score(np.array(total_one_hot_label), np.array(total_output))
+    train_losses.append(running_loss / len(trainloader))
+
+    print("=======================================================")
+    print("\t at epoch {}".format(epoch))
+    print("\t train loss is {}".format(train_losses[-1]))
+    print("\t train auc is {}".format(auc_score))
+
+    # test
+    test_loss = 0
+    total_output = []
+    total_one_hot_label  = []
+    model.eval()
+    with torch.no_grad():
+        for inputs, labels, id in testloader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            logps = model.forward(inputs)
+            batch_loss = criterion(logps, labels)
+            test_loss += batch_loss.item()
+            one_hot_label = np.zeros(shape=(len(labels), 2))
+            for k in range(len(labels)):
+                one_hot_label[k][labels[k].item()] = 1
+            # roc_auc_score()
+            total_output.extend(logps.cpu().numpy())
+            total_one_hot_label.extend(one_hot_label)
+    auc_score = roc_auc_score(np.array(total_one_hot_label), np.array(total_output))
+    test_losses.append(test_loss / len(testloader))
+    print("===========================")
+    if auc_score > curr_best:
+        curr_best = auc_score
+    print("\t test loss is {}".format(test_losses[-1]))
+    print("\t test auc is {}".format(auc_score))
+    print("\t current best is {}".format(curr_best))
+    print("=======================================================")
+
+    plt.plot(train_losses, "b", label="train")
+    plt.plot(test_losses, "r", label="test")
+    plt.ylim(0.4, 1)
+    plt.legend()
+    plt.savefig('train_test_auc_vanilla' + ".png")
+    plt.close()
