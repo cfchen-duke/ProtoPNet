@@ -13,6 +13,8 @@ matplotlib.use("Agg")
 import torchvision.datasets as datasets
 from skimage.transform import resize
 import ast
+import pickle
+import csv
 import pydicom as dcm
 import Augmentor
 
@@ -635,6 +637,52 @@ def move_DOI_to_training():
     print("saved ", count, " images in total")
             # print(name[14:])
 
+def Fides_visualization(size):
+    paths = []
+    save_dir = "Fides"+str(size)
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
+    for root, dir, files in os.walk("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated/spiculated/"):
+        for file in files:
+            if file.endswith(".npy"):
+                path = os.path.join(root, file)
+                paths.append(path)
+
+    paths.sort()
+    with open("fides_name_list.data", "wb") as filehandle:
+        pickle.dump(paths, filehandle)
+    tosave = np.zeros((size * 250, size * 250))
+    index = 0
+    for path in paths:
+        arr = np.load(path)
+        arr = resize(arr, (224, 224))
+        arr = np.pad(arr, 13, constant_values=0)
+        tosave[(index//size)*250:(index//size)*250 + 250, (index%size)*250:(index%size)*250 + 250] = arr
+        index += 1
+        if index == size * size:
+            imsave(save_dir+ "/upto_"+path[-14:-4], tosave, cmap="gray")
+            tosave = np.zeros((size * 250, size * 250))
+            index = 0
+            print("Saved!")
+
+def Fidex_visualization_csv(dir):
+
+    with open(dir, "rb") as filehandle:
+        paths = pickle.load(filehandle)
+
+    with open("fides.csv", "w") as csv_file:
+        fieldnames = ["img name", "mega image label", "row", "col", "spiculated? 1 - yes, 0 - no, 2 - unsure", "Good, prototypical example to display? 1 - yes, 0 - no"]
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        writer.writeheader()
+        for i, path in enumerate(paths):
+            name = path.split("/")[-1]
+            writer.writerow({"img name": name,
+                             "mega image label": str(i//100 + 1),
+                             "row": str((i//10) % 10 + 1),
+                             "col": str(i%10 + 1),
+                             })
+
+
 
 
 
@@ -666,5 +714,6 @@ if __name__ == "__main__":
     #         + pos + "/", 1000 ,
     #         "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_"
     #         + pos + "_augmented/")
-
-    move_DOI_to_training()
+    # Fides_visualization(10)
+    Fidex_visualization_csv("fides_name_list.data")
+    # move_DOI_to_training()

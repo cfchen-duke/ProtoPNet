@@ -20,11 +20,15 @@ parser.add_argument("-model", type=str)
 parser.add_argument("-train_dir", type=str, default="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_crazy_with_rot/")
 parser.add_argument("-test_dir", type=str, default="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/")
 parser.add_argument("-name", type=str)
+parser.add_argument("-lr", type=lambda x: int(float(x)))
+parser.add_argument("-wd", type=lambda x: int(float(x)))
 args = parser.parse_args()
 model_name = args.model
 train_dir = args.train_dir
 test_dir = args.test_dir
 task_name = args.name
+lr = args.lr
+wd = args.wd
 
 if not os.path.exists(task_name):
     os.mkdir(task_name)
@@ -50,13 +54,13 @@ class Vanilla_VGG(nn.Module):
         self.features = myfeatures
         self.avgpool = nn.AdaptiveAvgPool2d((7,7))
         self.classifier = nn.Sequential(
-            nn.Linear(512*7*7, 1024),
-            nn.ReLU(True),
-            nn.Dropout(),
+            nn.Linear(512*7*7, 2),
+            # nn.ReLU(True),
+            # nn.Dropout(),
             # nn.Linear(1024, 512),
             # nn.ReLU(True),
             # nn.Dropout(),
-            nn.Linear(1024, 2),
+            # nn.Linear(1024, 2),
             nn.LogSoftmax(dim=0)
         )
 
@@ -102,7 +106,7 @@ testloader = torch.utils.data.DataLoader(
 epochs = 1000
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-3)
+optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
 
 device = torch.device("cuda")
 model.to(device)
@@ -196,10 +200,14 @@ for epoch in range(epochs):
     print('\tthe confusion matrix is: \t\t{0}'.format(confusion_matrix))
     print("=======================================================")
 
+    # save model
+    if auc_score > 0.7:
+        torch.save(model, task_name + "/" + str(auc_score) + "_at_epoch_" + str(epoch))
+
     # plot graphs
     plt.plot(train_losses, "b", label="train")
     plt.plot(test_losses, "r", label="test")
-    plt.ylim(0, 1)
+    plt.ylim(0, 4)
     plt.legend()
     plt.savefig(task_name+'/train_test_loss_vanilla' + ".png")
     plt.close()
