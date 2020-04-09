@@ -8,20 +8,28 @@ from dataHelper import DatasetFolder
 from torchvision import transforms
 import torch
 from torch import optim
+from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 from sklearn.metrics import roc_auc_score
-
+import os
 
 matplotlib.use("Agg")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-model", type=str)
-parser.add_argument("-train_dir", type=str, default="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_morer_with_rot/")
+parser.add_argument("-train_dir", type=str, default="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_crazy_with_rot/")
 parser.add_argument("-test_dir", type=str, default="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/")
+parser.add_argument("-name", type=str)
 args = parser.parse_args()
 model_name = args.model
 train_dir = args.train_dir
 test_dir = args.test_dir
+task_name = args.name
+
+if not os.path.exists(task_name):
+    os.mkdir(task_name)
+
+writer = SummaryWriter()
 
 base_architecture_to_features = {'vgg11': vgg11_features,
                                  'vgg11_bn': vgg11_bn_features,
@@ -42,12 +50,12 @@ class Vanilla_VGG(nn.Module):
         self.features = myfeatures
         self.avgpool = nn.AdaptiveAvgPool2d((7,7))
         self.classifier = nn.Sequential(
-            nn.Linear(512*7*7, 4096),
+            nn.Linear(512*7*7, 1024),
             nn.ReLU(True),
             nn.Dropout(),
-            nn.Linear(4096, 1024),
-            nn.ReLU(True),
-            nn.Dropout(),
+            # nn.Linear(1024, 512),
+            # nn.ReLU(True),
+            # nn.Dropout(),
             nn.Linear(1024, 2),
             nn.LogSoftmax(dim=0)
         )
@@ -94,18 +102,21 @@ testloader = torch.utils.data.DataLoader(
 epochs = 1000
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=1e-4)
+optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-3)
 
 device = torch.device("cuda")
 model.to(device)
 
 train_losses = []
 test_losses = []
+train_auc = []
+test_auc = []
 curr_best = 0
 
 
 for epoch in range(epochs):
     # train
+    confusion_matrix = [0, 0, 0, 0]
     total_output = []
     total_one_hot_label  = []
     running_loss = 0
@@ -124,15 +135,28 @@ for epoch in range(epochs):
         # roc_auc_score()
         total_output.extend(logps.cpu().detach().numpy())
         total_one_hot_label.extend(one_hot_label)
+        # confusion matrix
+        _, predicted = torch.max(logps.data, 1)
+        for t_idx, t in enumerate(labels):
+            if predicted[t_idx] == t and predicted[t_idx] == 1:  # true positive
+                confusion_matrix[0] += 1
+            elif t == 0 and predicted[t_idx] == 1:
+                confusion_matrix[1] += 1  # false positives
+            elif t == 1 and predicted[t_idx] == 0:
+                confusion_matrix[2] += 1  # false negative
+            else:
+                confusion_matrix[3] += 1
+
     auc_score = roc_auc_score(np.array(total_one_hot_label), np.array(total_output))
     train_losses.append(running_loss / len(trainloader))
-
+    train_auc.append(auc_score)
     print("=======================================================")
     print("\t at epoch {}".format(epoch))
     print("\t train loss is {}".format(train_losses[-1]))
     print("\t train auc is {}".format(auc_score))
-
+    print('\tthe confusion matrix is: \t\t{0}'.format(confusion_matrix))
     # test
+    confusion_matrix = [0, 0, 0, 0]
     test_loss = 0
     total_output = []
     total_one_hot_label  = []
@@ -149,19 +173,44 @@ for epoch in range(epochs):
             # roc_auc_score()
             total_output.extend(logps.cpu().numpy())
             total_one_hot_label.extend(one_hot_label)
+            # confusion matrix
+            _, predicted = torch.max(logps.data, 1)
+            for t_idx, t in enumerate(labels):
+                if predicted[t_idx] == t and predicted[t_idx] == 1:  # true positive
+                    confusion_matrix[0] += 1
+                elif t == 0 and predicted[t_idx] == 1:
+                    confusion_matrix[1] += 1  # false positives
+                elif t == 1 and predicted[t_idx] == 0:
+                    confusion_matrix[2] += 1  # false negative
+                else:
+                    confusion_matrix[3] += 1
     auc_score = roc_auc_score(np.array(total_one_hot_label), np.array(total_output))
     test_losses.append(test_loss / len(testloader))
+    test_auc.append(auc_score)
     print("===========================")
     if auc_score > curr_best:
         curr_best = auc_score
     print("\t test loss is {}".format(test_losses[-1]))
     print("\t test auc is {}".format(auc_score))
     print("\t current best is {}".format(curr_best))
+    print('\tthe confusion matrix is: \t\t{0}'.format(confusion_matrix))
     print("=======================================================")
 
+    # plot graphs
     plt.plot(train_losses, "b", label="train")
     plt.plot(test_losses, "r", label="test")
+    plt.ylim(0, 1)
+    plt.legend()
+    plt.savefig(task_name+'/train_test_loss_vanilla' + ".png")
+    plt.close()
+
+    plt.plot(train_auc, "b", label="train")
+    plt.plot(test_auc, "r", label="test")
     plt.ylim(0.4, 1)
     plt.legend()
-    plt.savefig('train_test_auc_vanilla' + ".png")
+    plt.savefig(task_name + '/train_test_auc_vanilla' + ".png")
     plt.close()
+
+
+
+writer.close()
