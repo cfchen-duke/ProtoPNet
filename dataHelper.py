@@ -660,8 +660,9 @@ def Fides_visualization(size):
         tosave[(index//size)*250:(index//size)*250 + 250, (index%size)*250:(index%size)*250 + 250] = arr
         index += 1
         if index == size * size:
-            imsave(save_dir+ "/upto_"+path[-14:-4], tosave, cmap="gray")
+            # imsave(save_dir+ "/upto_"+path[-14:-4], tosave, cmap="gray")
             tosave = np.zeros((size * 250, size * 250))
+            print(path[-14:-4])
             index = 0
             print("Saved!")
 
@@ -714,6 +715,6 @@ if __name__ == "__main__":
     #         + pos + "/", 1000 ,
     #         "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_"
     #         + pos + "_augmented/")
-    # Fides_visualization(10)
-    Fidex_visualization_csv("fides_name_list.data")
+    Fides_visualization(10)
+    # Fidex_visualization_csv("fides_name_list.data")
     # move_DOI_to_training()
