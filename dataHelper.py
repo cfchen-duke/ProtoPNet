@@ -115,7 +115,8 @@ class DatasetFolder(datasets.DatasetFolder):
         path, target = self.samples[index]
         patient_id = path.split("/")[-1][:-4]
         sample = self.loader(path)
-        sample = resize(sample, self.target_size)
+        if self.target_size:
+            sample = resize(sample, self.target_size)
         #  normalize to 0 to 1
         # sample = (sample - np.amin(np.abs(sample))) / (np.amax(np.abs(sample))-np.amin(np.abs(sample)))
         #  imagenet normalization
@@ -301,13 +302,10 @@ def window_adjustment(wwidth, wcen):
         return wwidth, wcen
 
 
-def cropROI(target, augByWindow=False, numAugByWin=5,
+def cropROI(target, csvpath,  augByWindow=False, numAugByWin=5,
             datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/"):
     """Crops out the ROI of the image as defined in the spreadsheet provided by Yinhao."""
-    # df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
-    df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
-    # datapath = "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/train/"
-    # datapath = "/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/"
+    df = pd.read_excel(csvpath)
     # classes = df["Class"]
     locations = df['Box_List']
     win_width = df['Win_Width']
@@ -688,10 +686,20 @@ def Fidex_visualization_csv(dir):
 
 
 if __name__ == "__main__":
-    # cropROI("/usr/project/xtmp/mammo/binary_Feb/train_context_roi_correct_DP/", augByWindow=False,
-    #         datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/")
-    # cropROI("/usr/project/xtmp/mammo/binary_Feb/test_context_roi_correct_DP/", augByWindow=False,
-    #         datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/test/")
+    cropROI("/usr/project/xtmp/mammo/binary_Feb/five_classes_roi/train_context_roi/", augByWindow=False,
+            datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/",
+            csvpath="/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
+    cropROI("/usr/project/xtmp/mammo/binary_Feb/five_calsses_roi/test_context_roi/", augByWindow=False,
+            datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/test/",
+            csvpath="/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
+
+    cropROI("/usr/project/xtmp/mammo/binary_Feb/five_classes_roi/train_context_roi/", augByWindow=False,
+            datapath="/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/train/",
+            csvpath="/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
+    cropROI("/usr/project/xtmp/mammo/binary_Feb/five_classes_roi/test_context_roi/", augByWindow=False,
+            datapath="/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/test/",
+            csvpath="/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
+
     # crop_negative_patches("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/", datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/")
     # # cleanup("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_crazy/")
     # for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
@@ -715,6 +723,6 @@ if __name__ == "__main__":
     #         + pos + "/", 1000 ,
     #         "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_"
     #         + pos + "_augmented/")
-    Fides_visualization(10)
+    # Fides_visualization(10)
     # Fidex_visualization_csv("fides_name_list.data")
     # move_DOI_to_training()
