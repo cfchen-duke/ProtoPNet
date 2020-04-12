@@ -22,8 +22,8 @@ parser.add_argument("-model", type=str)
 parser.add_argument("-train_dir", type=str, default="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_crazy_with_rot/")
 parser.add_argument("-test_dir", type=str, default="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/")
 parser.add_argument("-name", type=str)
-parser.add_argument("-lr", type=lambda x: int(float(x)))
-parser.add_argument("-wd", type=lambda x: int(float(x)))
+parser.add_argument("-lr", type=lambda x: float(x))
+parser.add_argument("-wd", type=lambda x: float(x))
 args = parser.parse_args()
 model_name = args.model
 train_dir = args.train_dir
@@ -31,6 +31,7 @@ test_dir = args.test_dir
 task_name = args.name
 lr = args.lr
 wd = args.wd
+print(lr, wd)
 
 if not os.path.exists(task_name):
     os.mkdir(task_name)
@@ -46,12 +47,12 @@ train_dataset = DatasetFolder(
     augmentation=False,
     loader=np.load,
     extensions=("npy",),
-    target_size=None,
+    target_size=(224, 224),
     transform = transforms.Compose([
         torch.from_numpy,
     ]))
 trainloader = torch.utils.data.DataLoader(
-    train_dataset, batch_size=100, shuffle=True,
+    train_dataset, batch_size=50, shuffle=True,
     num_workers=4, pin_memory=False)
 
 # test set
@@ -59,12 +60,12 @@ test_dataset =DatasetFolder(
     test_dir,
     loader=np.load,
     extensions=("npy",),
-    target_size=None,
+    target_size=(224, 224),
     transform = transforms.Compose([
         torch.from_numpy,
     ]))
 testloader = torch.utils.data.DataLoader(
-    test_dataset, batch_size=100, shuffle=False,
+    test_dataset, batch_size=50, shuffle=False,
     num_workers=4, pin_memory=False)
 
 

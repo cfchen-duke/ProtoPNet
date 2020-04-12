@@ -20,8 +20,8 @@ parser.add_argument("-model", type=str)
 parser.add_argument("-train_dir", type=str, default="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_crazy_with_rot/")
 parser.add_argument("-test_dir", type=str, default="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/")
 parser.add_argument("-name", type=str)
-parser.add_argument("-lr", type=lambda x: int(float(x)))
-parser.add_argument("-wd", type=lambda x: int(float(x)))
+parser.add_argument("-lr", type=lambda x: float(x))
+parser.add_argument("-wd", type=lambda x: float(x))
 args = parser.parse_args()
 model_name = args.model
 train_dir = args.train_dir
@@ -29,6 +29,7 @@ test_dir = args.test_dir
 task_name = args.name
 lr = args.lr
 wd = args.wd
+print(wd, lr)
 
 if not os.path.exists(task_name):
     os.mkdir(task_name)
