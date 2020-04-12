@@ -1,3 +1,5 @@
+from fcn_model import FCN16s
+
 import matplotlib
 import matplotlib.pyplot as plt
 from vgg_features import vgg11_features, vgg11_bn_features, vgg13_features, vgg13_bn_features, vgg16_features, vgg16_bn_features,\
@@ -29,52 +31,14 @@ test_dir = args.test_dir
 task_name = args.name
 lr = args.lr
 wd = args.wd
-print(wd, lr)
+print(lr, wd)
 
 if not os.path.exists(task_name):
     os.mkdir(task_name)
 
 writer = SummaryWriter()
 
-base_architecture_to_features = {'vgg11': vgg11_features,
-                                 'vgg11_bn': vgg11_bn_features,
-                                 'vgg13': vgg13_features,
-                                 'vgg13_bn': vgg13_bn_features,
-                                 'vgg16': vgg16_features,
-                                 'vgg16_bn': vgg16_bn_features,
-                                 'vgg19': vgg19_features,
-                                 'vgg19_bn': vgg19_bn_features}
-
-features = base_architecture_to_features[model_name](pretrained=True)
-
-# build model
-class Vanilla_VGG(nn.Module):
-    def __init__(self, myfeatures):
-        super(Vanilla_VGG, self).__init__()
-
-        self.features = myfeatures
-        self.avgpool = nn.AdaptiveAvgPool2d((7,7))
-        self.classifier = nn.Sequential(
-            nn.Linear(512*7*7, 2),
-            # nn.ReLU(True),
-            # nn.Dropout(),
-            # nn.Linear(1024, 512),
-            # nn.ReLU(True),
-            # nn.Dropout(),
-            # nn.Linear(1024, 2),
-            nn.LogSoftmax(dim=0)
-        )
-
-
-    def forward(self, x):
-        x = self.features(x)
-        x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-        x = self.classifier(x)
-        return x
-
-
-model = Vanilla_VGG(features)
+model = FCN16s()
 
 # load data
 # train set
@@ -88,20 +52,20 @@ train_dataset = DatasetFolder(
         torch.from_numpy,
     ]))
 trainloader = torch.utils.data.DataLoader(
-    train_dataset, batch_size=100, shuffle=True,
+    train_dataset, batch_size=50, shuffle=True,
     num_workers=4, pin_memory=False)
 
 # test set
 test_dataset =DatasetFolder(
     test_dir,
     loader=np.load,
-    target_size=(224, 224),
     extensions=("npy",),
+    target_size=(224, 224),
     transform = transforms.Compose([
         torch.from_numpy,
     ]))
 testloader = torch.utils.data.DataLoader(
-    test_dataset, batch_size=100, shuffle=False,
+    test_dataset, batch_size=50, shuffle=False,
     num_workers=4, pin_memory=False)
 
 
@@ -131,7 +95,8 @@ for epoch in range(epochs):
     for inputs, labels, id in trainloader:
         inputs, labels = inputs.to(device), labels.to(device)
         optimizer.zero_grad()
-        logps = model.forward(inputs)
+        logps = model(inputs)
+        print("logits are ", logps)
         loss = criterion(logps, labels)
         loss.backward()
         optimizer.step()
@@ -225,3 +190,4 @@ for epoch in range(epochs):
 
 
 writer.close()
+
