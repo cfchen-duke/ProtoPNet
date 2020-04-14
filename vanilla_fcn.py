@@ -96,7 +96,7 @@ for epoch in range(epochs):
         inputs, labels = inputs.to(device), labels.to(device)
         optimizer.zero_grad()
         logps = model(inputs)
-        print("logits are ", logps)
+        # print("logits are ", logps.shape)
         loss = criterion(logps, labels)
         loss.backward()
         optimizer.step()
