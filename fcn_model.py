@@ -1,8 +1,18 @@
 import torch.nn as nn
+import torch
 
+#
+# my_dict = model_zoo.load_url(model_urls['vgg11'], model_dir=model_dir)
+#         keys_to_remove = set()
+#         for key in my_dict:
+#             if key.startswith('classifier'):
+#                 keys_to_remove.add(key)
+#         for key in keys_to_remove:
+#             del my_dict[key]
+#         model.load_state_dict(my_dict, strict=False)
 
 class FCN16s(nn.Module):
-    def __init__(self, n_class=2):
+    def __init__(self, n_class=2, pretrain=True):
         super(FCN16s, self).__init__()
         # conv1
         self.conv1_1 = nn.Conv2d(3, 64, 3, padding=100)
@@ -58,6 +68,9 @@ class FCN16s(nn.Module):
         self.score_fr = nn.Conv2d(4096, n_class, 1)
         self.score_pool4 = nn.Conv2d(512, n_class, 1)
 
+        # max pool to get logits
+        self.maxpool = nn.MaxPool2d(8)
+
         self.upscore2 = nn.ConvTranspose2d(
             n_class, n_class, 4, stride=2, bias=False)
         self.upscore16 = nn.ConvTranspose2d(
@@ -105,18 +118,22 @@ class FCN16s(nn.Module):
         h = self.drop7(h)
 
         h = self.score_fr(h)
-        print("score fr ", h)
-        h = self.upscore2(h)
-        print("upscore 2 ", h)
-        upscore2 = h  # 1/16
+        # print("score fr ", h.shape)
+        h = self.maxpool(h)
+        # print("after maxpool", h.shape)
 
-        h = self.score_pool4(pool4)
-        h = h[:, :, 5:5 + upscore2.size()[2], 5:5 + upscore2.size()[3]]
-        score_pool4c = h  # 1/16
-
-        h = upscore2 + score_pool4c
-
-        h = self.upscore16(h)
-        h = h[:, :, 27:27 + x.size()[2], 27:27 + x.size()[3]].contiguous()
-
-        return h
+        return h.view(-1, 2)
+        # h = self.upscore2(h)
+        # print("upscore 2 ", h.shape)
+        # upscore2 = h  # 1/16
+        #
+        # h = self.score_pool4(pool4)
+        # h = h[:, :, 5:5 + upscore2.size()[2], 5:5 + upscore2.size()[3]]
+        # score_pool4c = h  # 1/16
+        #
+        # h = upscore2 + score_pool4c
+        # print("after pool4", h.shape)
+        # h = self.upscore16(h)
+        # h = h[:, :, 27:27 + x.size()[2], 27:27 + x.size()[3]].contiguous()
+        # print("final", h.shape)
+        # raise
