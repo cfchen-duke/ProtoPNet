@@ -29,6 +29,8 @@ parser.add_argument("-latent", nargs=1, type=int, default=32)
 parser.add_argument("-model", type=str)
 parser.add_argument("-base", type=str)
 parser.add_argument("-train_dir", type=str)
+parser.add_argument("-test_dir", type=str)
+parser.add_argument("-push_dir", type=str)
 args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid[0]
 print(os.environ['CUDA_VISIBLE_DEVICES'])
@@ -76,6 +78,10 @@ normalize = transforms.Normalize(mean=mean,
 if args.train_dir:
     print("inputting training dir")
     train_dir = args.train_dir
+if args.test_dir:
+    test_dir = args.test_dir
+if args.push_dir:
+    train_push_dir = args.push_dir
 
 # all datasets
 # train set

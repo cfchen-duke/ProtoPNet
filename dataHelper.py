@@ -9,6 +9,7 @@ import png
 from matplotlib.pyplot import imsave, imread
 import matplotlib
 from PIL import Image
+
 matplotlib.use("Agg")
 import torchvision.datasets as datasets
 from skimage.transform import resize
@@ -44,13 +45,14 @@ def random_flip(input, axis):
     else:
         return input
 
+
 def random_crop(input):
     ran = random.random()
     if ran > 0.2:
         # find a random place to be the left upper corner of the crop
         rx = int(random.random() * input.shape[0] // 10)
         ry = int(random.random() * input.shape[1] // 10)
-        return input[rx : rx + int(input.shape[0] * 9 // 10), ry : ry + int(input.shape[1] * 9 // 10)]
+        return input[rx: rx + int(input.shape[0] * 9 // 10), ry: ry + int(input.shape[1] * 9 // 10)]
     else:
         return input
 
@@ -61,7 +63,7 @@ def random_rotate_90(input):
         return np.rot90(input)
     else:
         return input
-      
+
 
 def random_shift(input, axis, range):
     ran = random.random()
@@ -70,7 +72,7 @@ def random_shift(input, axis, range):
 def random_rotation(x, chance):
     ran = random.random()
     img = Image.fromarray(x)
-    if ran > 1- chance:
+    if ran > 1 - chance:
         # create black edges
         angle = np.random.randint(0, 90)
         img = img.rotate(angle=angle, expand=1)
@@ -115,7 +117,8 @@ class DatasetFolder(datasets.DatasetFolder):
         path, target = self.samples[index]
         patient_id = path.split("/")[-1][:-4]
         sample = self.loader(path)
-        sample = resize(sample, self.target_size)
+        if self.target_size:
+            sample = resize(sample, self.target_size)
         #  normalize to 0 to 1
         # sample = (sample - np.amin(np.abs(sample))) / (np.amax(np.abs(sample))-np.amin(np.abs(sample)))
         #  imagenet normalization
@@ -173,7 +176,6 @@ def dataAugmentation(in_dir, out_dir, num_of_sample):
             p.sample(num_of_sample)
 
 
-
 def cleanup(dir):
     """
     throw out all the images that has over 80% black, 80% white, and size smaller than 10kb
@@ -191,7 +193,7 @@ def cleanup(dir):
                 black = image.shape[0] * image.shape[1] - np.count_nonzero(np.round(image, 3))
                 whites = image.shape[0] * image.shape[1] - np.count_nonzero(np.round(image - np.amax(image), 4))
                 if image.shape[0] < 10 or image.shape[1] < 10 or black >= image.shape[0] * image.shape[1] * 0.8 or \
-                        whites >= image.shape[0] * image.shape[1] * 0.8 or os.path.getsize(path)/1024 < 10:
+                        whites >= image.shape[0] * image.shape[1] * 0.8 or os.path.getsize(path) / 1024 < 10:
                     imsave("/usr/xtmp/ct214/removed/" + file[:-4], image)
                     os.remove(path)
                     print("file removed!")
@@ -201,7 +203,7 @@ def cleanup(dir):
                 whites = image.shape[0] * image.shape[1] - np.count_nonzero(np.round(image - np.amax(image), 4))
                 black = image.shape[0] * image.shape[1] - np.count_nonzero(np.round(image, 3))
                 if image.shape[0] < 10 or image.shape[1] < 10 or black >= image.shape[0] * image.shape[1] * 0.8 or \
-                        whites >= image.shape[0] * image.shape[1] * 0.8 or os.path.getsize(path)/1024 < 10:
+                        whites >= image.shape[0] * image.shape[1] * 0.8 or os.path.getsize(path) / 1024 < 10:
                     imsave("/usr/xtmp/ct214/removed/" + file[:-4], image)
                     os.remove(path)
                     removed += 1
@@ -209,7 +211,7 @@ def cleanup(dir):
     print(removed)
 
 
-def dataAugNumpy(path, targetNumber, targetDir):
+def dataAugNumpy(path, targetNumber, targetDir, skip=None, rot=True):
     class1, class2 = os.listdir(path)
     if not os.path.exists(targetDir):
         os.mkdir(targetDir)
@@ -218,14 +220,19 @@ def dataAugNumpy(path, targetNumber, targetDir):
     if not os.path.exists(targetDir + class2):
         os.mkdir(targetDir + class2)
     count = 0
+    round = 0
     while count < targetNumber:
+        round += 1
         for root, dir, files in os.walk(os.path.join(path, class1)):
             for file in files:
+                if skip and skip in file:
+                    continue
                 filepath = os.path.join(root, file)
                 arr = np.load(filepath)
                 try:
                     arr = random_crop(arr)
-                    arr = random_rotation(arr, 0.9)
+                    if rot:
+                        arr = random_rotation(arr, 0.9)
                     arr = random_flip(arr, 0)
                     arr = random_flip(arr, 1)
                     arr = random_rotate_90(arr)
@@ -239,11 +246,12 @@ def dataAugNumpy(path, targetNumber, targetDir):
                             whites >= arr.shape[0] * arr.shape[1] * 0.8:
                         print("illegal content")
                         continue
-                    if count %1500 == 0:
+                    if count % 1500 == 0:
                         if not os.path.exists("./visualizations_of_augmentation/" + class2 + class1 + "/"):
                             os.makedirs("./visualizations_of_augmentation/" + class2 + class1 + "/")
-                        imsave("./visualizations_of_augmentation/" + class2 + class1 + "/"+str(count), arr, cmap="gray")
-                    np.save(targetDir + class1 + "/" + str(count) + ".npy", arr)
+                        imsave("./visualizations_of_augmentation/" + class2 + class1 + "/" + str(count), arr,
+                               cmap="gray")
+                    np.save(targetDir + class1 + "/" + file[:-4] + "aug" + str(round), arr)
                     count += 1
                     print(count)
                 except:
@@ -254,9 +262,13 @@ def dataAugNumpy(path, targetNumber, targetDir):
                     break
     print(count)
     count = 0
+    round = 0
     while count < targetNumber:
+        round += 1
         for root, dir, files in os.walk(os.path.join(path, class2)):
             for file in files:
+                if skip and skip in file:
+                    continue
                 filepath = os.path.join(root, file)
                 arr = np.load(filepath)
                 try:
@@ -274,11 +286,11 @@ def dataAugNumpy(path, targetNumber, targetDir):
                             whites >= arr.shape[0] * arr.shape[1] * 0.8:
                         print("illegal content")
                         continue
-                    if count %150 == 0:
+                    if count % 150 == 0:
                         if not os.path.exists("./visualizations_of_augmentation/" + class2 + "/"):
                             os.makedirs("./visualizations_of_augmentation/" + class2 + "/")
-                        imsave("./visualizations_of_augmentation/" + class2 + "/"+str(count), arr,cmap="gray")
-                    np.save(targetDir + class2 + "/" + str(count) + ".npy", arr)
+                        imsave("./visualizations_of_augmentation/" + class2 + "/" + str(count), arr, cmap="gray")
+                    np.save(targetDir + class2 + "/" + file[:-4] + "aug" + str(round), arr)
                     count += 1
                 except:
                     if not os.path.exists("./error_of_augmentation/" + class2 + "/"):
@@ -291,7 +303,7 @@ def dataAugNumpy(path, targetNumber, targetDir):
 
 
 def window_adjustment(wwidth, wcen):
-    if wcen==2047 and wwidth==4096:
+    if wcen == 2047 and wwidth == 4096:
         return wwidth, wcen
     else:
         new_wcen = np.random.randint(-100, 300)
@@ -301,13 +313,10 @@ def window_adjustment(wwidth, wcen):
         return wwidth, wcen
 
 
-def cropROI(target, augByWindow=False, numAugByWin=5,
+def cropROI(target, csvpath, augByWindow=False, numAugByWin=5,
             datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/"):
     """Crops out the ROI of the image as defined in the spreadsheet provided by Yinhao."""
-    # df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
-    df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
-    # datapath = "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/train/"
-    # datapath = "/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/"
+    df = pd.read_excel(csvpath)
     # classes = df["Class"]
     locations = df['Box_List']
     win_width = df['Win_Width']
@@ -329,9 +338,6 @@ def cropROI(target, augByWindow=False, numAugByWin=5,
             if len(name.split("_")[0]) != 5:
                 name = "_".join([name_list[-5][-2:]] + name_list[-4:])
             name = name[:-4] + ".png"
-            # if name in did:
-            #     print("already seen ", name)
-            #     continue
             if name in names:
                 i = names.index(name)
             else:
@@ -397,7 +403,8 @@ def cropROI(target, augByWindow=False, numAugByWin=5,
                         max_shape0 = max(max_shape0, roi.shape[0])
                         max_shape1 = max(max_shape1, roi.shape[1])
                         count += 1
-                        print("successfully saved ", name, " . Have saved ", count, " total, seen ", file_count, " files in total")
+                        print("successfully saved ", name, " . Have saved ", count, " total, seen ", file_count,
+                              " files in total")
 
             else:
                 wwidth = np.asarray(ast.literal_eval(win_width[i])).max()
@@ -405,7 +412,6 @@ def cropROI(target, augByWindow=False, numAugByWin=5,
 
                 image = ((image - wcen) / wwidth) + 0.5
                 image = np.clip(image, 0, 1)
-
 
                 # read the location
                 location = locations[i]
@@ -487,11 +493,10 @@ def crop_negative_patches(target, datapath):
                 print("failed to find ", name)
                 continue
 
-
             # find the class of the file
             for margin in ["spiculated", "circumscribed", "indistinct", "microlobulated", "obscured"]:
-                if not os.path.exists(target + "binary_train_" + margin + "_augmented_by_win/allneg/"):
-                    os.makedirs(target + "binary_train_" + margin + "_augmented_by_win/allneg/")
+                if not os.path.exists(target + "binary_test_" + margin + "/allneg/"):
+                    os.makedirs(target + "binary_test_" + margin + "/allneg/")
                 did.add(name)
                 # read image into np
                 reader = png.Reader(path)
@@ -529,26 +534,24 @@ def crop_negative_patches(target, datapath):
                     x1, y1, x2, y2 = max(0, min(x1, x2) - 100), max(0, min(y1, y2) - 100), \
                                      min(image.shape[0], max(x1, x2) + 100), min(image.shape[1], max(y1, y2) + 100)
                     # crop out locations around. Make sure that its in the right range
-                    neg1 = image[max(0, x1-224):x1, y1:y2]
+                    neg1 = image[max(0, x1 - 224):x1, y1:y2]
                     neg2 = image[x2:min(x2 + 224, image.shape[0]), y1:y2]
-                    neg3 = image[x1:x2, max(0, y1-224):y1]
+                    neg3 = image[x1:x2, max(0, y1 - 224):y1]
                     neg4 = image[x1:x2, y2:min(y2 + 224, image.shape[1])]
-                    neg5 = image[max(0, x1-224):x1, y2:min(y2 + 224, image.shape[1])]
-                    neg6 = image[max(0, x1-224):x1, max(0, y1-224):y1]
+                    neg5 = image[max(0, x1 - 224):x1, y2:min(y2 + 224, image.shape[1])]
+                    neg6 = image[max(0, x1 - 224):x1, max(0, y1 - 224):y1]
                     neg7 = image[x2:min(x2 + 224, image.shape[0]), y2:min(y2 + 224, image.shape[1])]
-                    neg8 = image[max(0, x1-224):x1, max(0, y1-224):y1]
+                    neg8 = image[max(0, x1 - 224):x1, max(0, y1 - 224):y1]
 
-                    for index, roi in enumerate([neg1,neg2,neg3,neg4,neg5,neg6,neg7,neg8]):
+                    for index, roi in enumerate([neg1, neg2, neg3, neg4, neg5, neg6, neg7, neg8]):
                         if roi.shape[0] > 10 and roi.shape[1] > 10 and np.count_nonzero(roi) > roi.shape[0] * \
                                 roi.shape[1] * 0.7:
-                            np.save(target + "binary_train_" + margin + "_augmented_by_win/allneg/" +  name[:-4] +
+                            np.save(target + "binary_test_" + margin + "/allneg/" + name[:-4] +
                                     "#" + str(j) + "neg" + str(index) + ".npy",
                                     roi)
                             count += 1
 
-
-                print("successfully saved ", name, " . Have saved ", count, " total")
-
+                print("successfully saved neg ", name, " . Have saved ", count, " total")
 
 
 def move_to_binary(pos, before, target):
@@ -588,6 +591,7 @@ def move_to_binary(pos, before, target):
 
 def DOI_moving_helper(positive_class, arr):
     base_dir = "/usr/xtmp/mammo/binary_Feb/binary_context_roi/"
+
 
 def move_DOI_to_training():
     df = pd.read_csv("/usr/project/xtmp/ct214/CBIS-DDSM//mass.csv")
@@ -635,14 +639,16 @@ def move_DOI_to_training():
             count += 1
             print(count)
     print("saved ", count, " images in total")
-            # print(name[14:])
+    # print(name[14:])
+
 
 def Fides_visualization(size):
     paths = []
-    save_dir = "Fides"+str(size)
+    save_dir = "Fides" + str(size)
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
-    for root, dir, files in os.walk("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated/spiculated/"):
+    for root, dir, files in os.walk(
+            "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated/spiculated/"):
         for file in files:
             if file.endswith(".npy"):
                 path = os.path.join(root, file)
@@ -657,7 +663,7 @@ def Fides_visualization(size):
         arr = np.load(path)
         arr = resize(arr, (224, 224))
         arr = np.pad(arr, 13, constant_values=0)
-        tosave[(index//size)*250:(index//size)*250 + 250, (index%size)*250:(index%size)*250 + 250] = arr
+        tosave[(index // size) * 250:(index // size) * 250 + 250, (index % size) * 250:(index % size) * 250 + 250] = arr
         index += 1
         if index == size * size:
             # imsave(save_dir+ "/upto_"+path[-14:-4], tosave, cmap="gray")
@@ -666,34 +672,68 @@ def Fides_visualization(size):
             index = 0
             print("Saved!")
 
-def Fidex_visualization_csv(dir):
 
+def Fidex_visualization_csv(dir):
     with open(dir, "rb") as filehandle:
         paths = pickle.load(filehandle)
 
     with open("fides.csv", "w") as csv_file:
-        fieldnames = ["img name", "mega image label", "row", "col", "spiculated? 1 - yes, 0 - no, 2 - unsure", "Good, prototypical example to display? 1 - yes, 0 - no"]
+        fieldnames = ["img name", "mega image label", "row", "col", "spiculated? 1 - yes, 0 - no, 2 - unsure",
+                      "Good, prototypical example to display? 1 - yes, 0 - no"]
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
         for i, path in enumerate(paths):
             name = path.split("/")[-1]
             writer.writerow({"img name": name,
-                             "mega image label": str(i//100 + 1),
-                             "row": str((i//10) % 10 + 1),
-                             "col": str(i%10 + 1),
+                             "mega image label": str(i // 100 + 1),
+                             "row": str((i // 10) % 10 + 1),
+                             "col": str(i % 10 + 1),
                              })
 
-
-
+def remove_duplicates(dir):
+    temp = list(os.listdir(dir))
+    temp.sort()
+    class1, class2 = temp
+    print(class1, class2)
+    path = os.path.join(dir, class2)
+    seen = set()
+    for root, _, files in os.walk(path):
+        for file in files:
+            if file.endswith(".npy"):
+                name = file[:file.index("#")]
+                seen.add(name)
+    count, remove = 0, 0
+    path = os.path.join(dir, class1)
+    for root, _, files in os.walk(path):
+        for file in files:
+            if file.endswith(".npy"):
+                count += 1
+                name = file[:file.index("#")]
+                if name in seen:
+                    os.remove(os.path.join(root, file))
+                    print("remove ", name)
+                    remove+=1
+    print(count, remove)
 
 
 if __name__ == "__main__":
-    # cropROI("/usr/project/xtmp/mammo/binary_Feb/train_context_roi_correct_DP/", augByWindow=False,
-    #         datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/")
-    # cropROI("/usr/project/xtmp/mammo/binary_Feb/test_context_roi_correct_DP/", augByWindow=False,
-    #         datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/test/")
-    # crop_negative_patches("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/", datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/")
-    # # cleanup("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_crazy/")
+    # cropROI("/usr/project/xtmp/mammo/binary_Feb/five_classes_roi/train_context_roi/", augByWindow=False,
+    #         datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/",
+    #         csvpath="/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
+    # cropROI("/usr/project/xtmp/mammo/binary_Feb/five_classes_roi/test_context_roi/", augByWindow=False,
+    #         datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/test/",
+    #         csvpath="/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
+
+    # cropROI("/usr/project/xtmp/mammo/binary_Feb/five_classes_roi/train_context_roi/", augByWindow=False,
+    #         datapath="/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/train/",
+    #         csvpath="/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
+    # cropROI("/usr/project/xtmp/mammo/binary_Feb/five_classes_roi/test_context_roi/", augByWindow=False,
+    #         datapath="/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/test/",
+    #         csvpath="/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
+
+    # crop_negative_patches("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/",
+    #                       datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/test/")
+
     # for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
     #     dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 50000,
     #             "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_crazy_with_rot/")
@@ -701,20 +741,23 @@ if __name__ == "__main__":
     #     dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 10000,
     #             "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_more_with_rot/")
 
-    
     # for pos in ["circumscribed","indistinct", "microlobulated", "obscured", "spiculated"]:
     #     for t in ["train", "test"]:
-    #          move_to_binary(pos, "/usr/project/xtmp/mammo/binary_Feb/"+ t + "_context_roi_correct_DP/",
+    #          move_to_binary(pos, "/usr/xtmp/mammo/binary_Feb/five_classes_roi/"+ t + "_context_roi/",
     #                         "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_" + t + "_"
-    #                         + pos + "/")
+    #                         + pos + "_noneg/")
+
+    dirs = os.listdir("/usr/xtmp/mammo/binary_Feb/binary_context_roi/")
+    print(dirs)
+    remove_duplicates("/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated_noneg/")
 
     # print("start data augmenting")
-    # for pos in ["circumscribed", "indistinct", "microlobulated", "obscured", "spiculated"]:
-    #     dataAugNumpy(
-    #         "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_"
-    #         + pos + "/", 1000 ,
-    #         "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_"
-    #         + pos + "_augmented/")
-    Fides_visualization(10)
+#     # for pos in ["spiculated","circumscribed", "indistinct", "microlobulated", "obscured"]:
+#     #     dataAugNumpy(
+#     #         path="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + pos + "_noneg/",
+#     #         targetNumber=2000,
+#     #         targetDir="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + pos + "_noneg_augmented/",
+#     #         rot=False)
+    # Fides_visualization(10)
     # Fidex_visualization_csv("fides_name_list.data")
     # move_DOI_to_training()
