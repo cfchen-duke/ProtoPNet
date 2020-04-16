@@ -199,6 +199,8 @@ class PPNet(nn.Module):
         min_distances = min_distances.view(-1, self.num_prototypes)
         prototype_activations = self.distance_2_similarity(min_distances)
         logits = self.last_layer(prototype_activations)
+        logits[:,0] = 25
+        # threshold = 25
         return logits, min_distances
 
     def push_forward(self, x):
@@ -281,7 +283,7 @@ class PPNet(nn.Module):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
 
-        self.set_last_layer_incorrect_connection(incorrect_strength=-0.5)
+        self.set_last_layer_incorrect_connection(incorrect_strength=0)
 
 
 
