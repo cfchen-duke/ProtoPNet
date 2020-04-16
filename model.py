@@ -58,7 +58,7 @@ class PPNet(nn.Module):
 
         num_prototypes_per_class = self.num_prototypes // self.num_classes
         for j in range(self.num_prototypes):
-            self.prototype_class_identity[j, j // num_prototypes_per_class] = 1
+            self.prototype_class_identity[j, 1] = 1
 
         self.proto_layer_rf_info = proto_layer_rf_info
 
