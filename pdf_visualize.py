@@ -198,11 +198,81 @@ def generate_pdf(test_dir, num_of_protos):
     print("saved in ", test_dir)
 
 
+def draw_box():
+    # load image
+    base_dir_J = "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/train/"
+    base_dir_D = "/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/"
+    names = ["DP_AJDI_R_LM_1", "DP_AICO_L_XCCL_1", "JMAHA_2_LMLO_D-5"]
+
+    for name in names:
+        if name[0] == "J":
+            base_dir = base_dir_J
+            df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
+        else:
+            base_dir = base_dir_D
+            df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
+
+        csv_names = list(df["File_Name"])
+        win_width = df['Win_Width']
+        win_cen = df['Win_Center']
+        locations = df['Box_List']
+        for root, dirs, files in os.walk(base_dir):
+            for file in files:
+                if name in file:
+                    i = csv_names.index(name+".png")
+                    # read image into np
+                    path = os.path.join(root, file)
+                    reader = png.Reader(path)
+                    data = reader.read()
+                    pixels = data[2]
+                    image = []
+                    for row in pixels:
+                        row = np.asarray(row, dtype=np.uint16)
+                        image.append(row)
+                    image = np.stack(image, 1)
+
+                    wwidth = np.asarray(ast.literal_eval(win_width[i])).max()
+                    wcen = np.median(np.asarray(ast.literal_eval(win_cen[i])))
+
+                    image = ((image - wcen) / wwidth) + 0.5
+                    image = np.clip(image, 0, 1)
+
+                    # read locations
+                    location = locations[i]
+                    j, curr, temp = 0, "", []
+                    while j < len(location):
+                        if location[j] in "1234567890":
+                            curr += location[j]
+                        else:
+                            if curr:
+                                temp.append(int(curr))
+                                curr = ""
+                        j += 1
+                    location = temp
+                    if len(location) % 4 != 0:
+                        print("Failed because of Illegal location information ", location, " for name ", name)
+                        continue
+                    for j in range(len(location) // 4):
+                        # if j not in mass_index:
+                        #     continue
+                        x1, y1, x2, y2 = location[4 * j:4 * (j + 1)]
+                        x1, y1, x2, y2 = max(0, min(x1, x2) - 100), max(0, min(y1, y2) - 100), \
+                                         min(image.shape[0], max(x1, x2) + 100), min(image.shape[1], max(y1, y2) + 100)
+                        start_point = (y1, x1)
+                        end_point = (y2, x2)
+                        color = (0, 255, 0)
+                        thickness = 5
+                        image = cv2.rectangle(image, start_point, end_point, color, thickness)
+                        image = np.rot90(image, k=3)
+                        imsave(name, image, cmap="gray")
+                        print("successfully saved ", name)
+
+
 if __name__ == "__main__":
     # Instantiation of inherited class
     #test_dir = "/usr/project/xtmp/ct214/model_visualization_result/spiculated/resnet34/MassMarginROI_1028_3/resume_from_140/140_3push0.7310.pth/JMAFE_4_RMLO_D-9.npy/"
-    test_dir = "/usr/xtmp/ct214/model_visualization_result/spiculated/resnet152/LesionNoLesion_0212_1/20_20push0.9380.pth/JMAEG_1_LCC_D-7.npy/"
-    num_of_protos = 3
-    generate_pdf(test_dir, num_of_protos)
-
+    # test_dir = "/usr/xtmp/ct214/model_visualization_result/spiculated/resnet152/LesionNoLesion_0212_1/20_20push0.9380.pth/JMAEG_1_LCC_D-7.npy/"
+    # num_of_protos = 3
+    # generate_pdf(test_dir, num_of_protos)
+    draw_box()
 

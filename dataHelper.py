@@ -252,6 +252,7 @@ def dataAugNumpy(path, targetNumber, targetDir, skip=None, rot=True):
                         imsave("./visualizations_of_augmentation/" + class2 + class1 + "/" + str(count), arr,
                                cmap="gray")
                     np.save(targetDir + class1 + "/" + file[:-4] + "aug" + str(round), arr)
+
                     count += 1
                     print(count)
                 except:
@@ -290,7 +291,9 @@ def dataAugNumpy(path, targetNumber, targetDir, skip=None, rot=True):
                         if not os.path.exists("./visualizations_of_augmentation/" + class2 + "/"):
                             os.makedirs("./visualizations_of_augmentation/" + class2 + "/")
                         imsave("./visualizations_of_augmentation/" + class2 + "/" + str(count), arr, cmap="gray")
+
                     np.save(targetDir + class2 + "/" + file[:-4] + "aug" + str(round), arr)
+
                     count += 1
                 except:
                     if not os.path.exists("./error_of_augmentation/" + class2 + "/"):
@@ -546,10 +549,13 @@ def crop_negative_patches(target, datapath):
                     for index, roi in enumerate([neg1, neg2, neg3, neg4, neg5, neg6, neg7, neg8]):
                         if roi.shape[0] > 10 and roi.shape[1] > 10 and np.count_nonzero(roi) > roi.shape[0] * \
                                 roi.shape[1] * 0.7:
+
                             np.save(target + "binary_test_" + margin + "/allneg/" + name[:-4] +
+
                                     "#" + str(j) + "neg" + str(index) + ".npy",
                                     roi)
                             count += 1
+
 
                 print("successfully saved neg ", name, " . Have saved ", count, " total")
 
@@ -731,8 +737,10 @@ if __name__ == "__main__":
     #         datapath="/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/test/",
     #         csvpath="/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
 
+
     # crop_negative_patches("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/",
     #                       datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/test/")
+
 
     # for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
     #     dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 50000,
@@ -752,12 +760,14 @@ if __name__ == "__main__":
     remove_duplicates("/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated_noneg/")
 
     # print("start data augmenting")
+
 #     # for pos in ["spiculated","circumscribed", "indistinct", "microlobulated", "obscured"]:
 #     #     dataAugNumpy(
 #     #         path="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + pos + "_noneg/",
 #     #         targetNumber=2000,
 #     #         targetDir="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + pos + "_noneg_augmented/",
 #     #         rot=False)
+
     # Fides_visualization(10)
     # Fidex_visualization_csv("fides_name_list.data")
     # move_DOI_to_training()
