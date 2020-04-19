@@ -26,7 +26,7 @@ joint_lr_step_size = 5
 warm_optimizer_lrs = {'add_on_layers': 3e-3,
                       'prototype_vectors': 3e-3}
 
-last_layer_optimizer_lr = 1e-4
+last_layer_optimizer_lr = 1e-3
 
 coefs = {
     'crs_ent': 1,

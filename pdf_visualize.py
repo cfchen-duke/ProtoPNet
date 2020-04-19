@@ -200,9 +200,9 @@ def generate_pdf(test_dir, num_of_protos):
 
 def draw_box():
     # load image
-    base_dir_J = "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/train/"
-    base_dir_D = "/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/"
-    names = ["DP_AJDI_R_LM_1", "DP_AICO_L_XCCL_1", "JMAHA_2_LMLO_D-5"]
+    base_dir_J = "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/test/"
+    base_dir_D = "/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/test/"
+    names = ["DP_AAPL_R_CC_1", "DP_ABBF_R_CC_1", "DP_ABDH_R_ML_3"]
 
     for name in names:
         if name[0] == "J":
