@@ -42,7 +42,7 @@ base_architecture = args.base
 
 # book keeping namings and code
 from settings import img_size, prototype_shape, num_classes, \
-                     prototype_activation_function, add_on_layers_type
+                     prototype_activation_function, add_on_layers_type, prototype_activation_function_in_numpy
 
 if not base_architecture:
     from settings import base_architecture
@@ -224,7 +224,8 @@ for epoch in range(num_train_epochs):
             prototype_self_act_filename_prefix=prototype_self_act_filename_prefix,
             proto_bound_boxes_filename_prefix=proto_bound_boxes_filename_prefix,
             save_prototype_class_identity=True,
-            log=log)
+            log=log,
+            prototype_activation_function_in_numpy=prototype_activation_function_in_numpy)
         accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
                         class_specific=class_specific, log=log)
         save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'push', accu=accu,
