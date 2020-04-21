@@ -34,7 +34,7 @@ parser.add_argument('-test_image', nargs=1, type=str, default='0')
 args = parser.parse_args()
 
 
-test_image_dir = '/usr/project/xtmp/mammo/binary_Feb/lesion_or_not_test/lesion/'
+test_image_dir = '/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/spiculated/'
 test_image_name = args.test_image[0] # 'DP_AAPR_R_MLO_3#0.npy'
 test_image_label = 1
 
@@ -43,8 +43,8 @@ test_image_path = os.path.join(test_image_dir, test_image_name)
 # load the model
 check_test_accu = False
 
-load_model_dir = '/usr/project/xtmp/ct214/saved_models/vgg16/PPNETLesionOrNot0305_512/'
-load_model_name = '170_16push0.8763.pth'
+load_model_dir = '/usr/project/xtmp/ct214/saved_models/vgg16/thresholdlogits25_0415/'
+load_model_name = '100_2push0.9503.pth'
 
 #if load_model_dir[-1] == '/':
 #    model_base_architecture = load_model_dir.split('/')[-3]
@@ -132,9 +132,12 @@ def save_preprocessed_img(fname, preprocessed_imgs, index=0):
     undo_preprocessed_img = undo_preprocessed_img[0]
     undo_preprocessed_img = undo_preprocessed_img.detach().cpu().numpy()
     undo_preprocessed_img = np.transpose(undo_preprocessed_img, [1,2,0])
-    
     plt.imsave(fname, resize(np.load(test_image_path), (224,224)), cmap="gray")
-    return undo_preprocessed_img
+    # return undo_preprocessed_img
+    test_image_path_channel = resize(np.load(test_image_path), (224,224))
+    test_image = np.stack([test_image_path_channel, test_image_path_channel, test_image_path_channel])
+    return np.transpose(test_image, [1,2,0])
+
 
 def save_prototype(fname, epoch, index):
     p_img = plt.imread(os.path.join(load_img_dir, 'epoch-'+str(epoch), 'prototype-img'+str(index)+'.png'))
