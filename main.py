@@ -33,7 +33,6 @@ parser.add_argument("-test_dir", type=str)
 parser.add_argument("-push_dir", type=str)
 args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid[0]
-print(os.environ['CUDA_VISIBLE_DEVICES'])
 latent_shape = args.latent[0]
 experiment_run = args.experiment_run[0]
 load_model_dir = args.model
@@ -53,13 +52,13 @@ prototype_shape = (prototype_shape[0], latent_shape, prototype_shape[2], prototy
 print(prototype_shape)
 
 model_dir = '/usr/xtmp/ct214/saved_models/' + base_architecture + '/' + experiment_run + '/'
+print(model_dir)
 makedir(model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), __file__), dst=model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), 'settings.py'), dst=model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), base_architecture_type + '_features.py'), dst=model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), 'model.py'), dst=model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), 'train_and_test.py'), dst=model_dir)
-
 log, logclose = create_logger(log_filename=os.path.join(model_dir, 'train.log'))
 img_dir = os.path.join(model_dir, 'img')
 makedir(img_dir)

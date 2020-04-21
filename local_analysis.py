@@ -43,8 +43,9 @@ test_image_path = os.path.join(test_image_dir, test_image_name)
 # load the model
 check_test_accu = False
 
-load_model_dir = '/usr/project/xtmp/ct214/saved_models/vgg16/thresholdlogits25_0415/'
-load_model_name = '100_2push0.9503.pth'
+load_model_dir = '/usr/project/xtmp/ct214/saved_models/vgg16/thresholdlogits25_lesion_512_0419/'
+load_model_name = '10_3push0.9792.pth'
+
 
 #if load_model_dir[-1] == '/':
 #    model_base_architecture = load_model_dir.split('/')[-3]

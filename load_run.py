@@ -27,7 +27,7 @@ import argparse
 # load the model
 check_test_accu = True
 
-load_model_dir = '/usr/project/xtmp/ct214/saved_models/vgg16/thresholdlogits25_spiculated_with_negs_0415//'
+load_model_dir = '/usr/project/xtmp/ct214/saved_models/vgg16/thresholdlogits25_spiculated_with_negs_0415/'
 load_model_name = '40_7push0.8829.pth'
 
 #if load_model_dir[-1] == '/':
@@ -64,7 +64,7 @@ normalize = transforms.Normalize(mean=mean,
                                  std=std)
 
 # load the test data and check test accuracy
-test_dir = "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/"
+test_dir = "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_noneg/"
 if check_test_accu:
     test_batch_size = 100
 
