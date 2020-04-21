@@ -9,7 +9,6 @@ import png
 from matplotlib.pyplot import imsave, imread
 import matplotlib
 from PIL import Image
-
 matplotlib.use("Agg")
 import torchvision.datasets as datasets
 from skimage.transform import resize
