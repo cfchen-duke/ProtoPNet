@@ -647,17 +647,18 @@ def Fides_visualization(size):
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
     for root, dir, files in os.walk(
-            "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated/spiculated/"):
+            "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/spiculated/"):
         for file in files:
             if file.endswith(".npy"):
                 path = os.path.join(root, file)
                 paths.append(path)
 
     paths.sort()
-    with open("fides_name_list.data", "wb") as filehandle:
+    with open("fides_name_list_test.data", "wb") as filehandle:
         pickle.dump(paths, filehandle)
     tosave = np.zeros((size * 250, size * 250))
     index = 0
+    index_ = 1
     for path in paths:
         arr = np.load(path)
         arr = resize(arr, (224, 224))
@@ -665,18 +666,21 @@ def Fides_visualization(size):
         tosave[(index // size) * 250:(index // size) * 250 + 250, (index % size) * 250:(index % size) * 250 + 250] = arr
         index += 1
         if index == size * size:
-            # imsave(save_dir+ "/upto_"+path[-14:-4], tosave, cmap="gray")
+            imsave(save_dir+ "/"+str(index_), tosave, cmap="gray")
             tosave = np.zeros((size * 250, size * 250))
-            print(path[-14:-4])
+            index_ += 1
             index = 0
             print("Saved!")
+    imsave(save_dir + "/last", tosave, cmap="gray")
+    print("Saved!")
+
 
 
 def Fidex_visualization_csv(dir):
     with open(dir, "rb") as filehandle:
         paths = pickle.load(filehandle)
 
-    with open("fides.csv", "w") as csv_file:
+    with open("fides_test.csv", "w") as csv_file:
         fieldnames = ["img name", "mega image label", "row", "col", "spiculated? 1 - yes, 0 - no, 2 - unsure",
                       "Good, prototypical example to display? 1 - yes, 0 - no"]
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
@@ -688,6 +692,7 @@ def Fidex_visualization_csv(dir):
                              "row": str((i // 10) % 10 + 1),
                              "col": str(i % 10 + 1),
                              })
+
 
 def remove_duplicates(dir):
     classes = list(os.listdir(dir))
@@ -747,8 +752,8 @@ if __name__ == "__main__":
     #                         + pos + "_noneg/")
 
     # dirs = os.listdir("/usr/xtmp/mammo/binary_Feb/binary_context_roi/")
-    # print(dirs)
-    remove_duplicates("/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/")
+    # # print(dirs)
+    # remove_duplicates("/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/")
     # dataAugNumpy(path="/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_by_win/",
     #              targetNumber=20000,
     #              targetDir="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_no_neg_augmented_more/",
@@ -762,6 +767,6 @@ if __name__ == "__main__":
 #     #         targetNumber=2000,
 #     #         targetDir="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + pos + "_noneg_augmented/",
 #     #         rot=False)
-    # Fides_visualization(10)
-    # Fidex_visualization_csv("fides_name_list.data")
+    Fides_visualization(10)
+    Fidex_visualization_csv("fides_name_list_test.data")
     # move_DOI_to_training()

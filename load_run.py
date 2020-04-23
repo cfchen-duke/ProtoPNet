@@ -149,7 +149,7 @@ def draw_roc_curve(data_path, model_path, image_name):
     plt.savefig(image_name)
 
 if __name__=="__main__":
-    main(test_dir="/usr/project/xtmp/mammo/binary_Feb/sorted_by_Fides_ratings/definite/",
+    main(test_dir="/usr/project/xtmp/mammo/binary_Feb/sorted_by_Fides_ratings/definite_bad/",
          model_dir="/usr/project/xtmp/ct214/saved_models/vgg16/thresholdlogits25_spiculated_with_negs_0415/",
          model_name="40_9push0.8829.pth")
     # draw_roc_curve("/usr/xtmp/mammo/binary_Feb/lesion_or_not_test/",
