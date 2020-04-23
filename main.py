@@ -33,7 +33,6 @@ parser.add_argument("-test_dir", type=str)
 parser.add_argument("-push_dir", type=str)
 args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid[0]
-print(os.environ['CUDA_VISIBLE_DEVICES'])
 latent_shape = args.latent[0]
 experiment_run = args.experiment_run[0]
 load_model_dir = args.model
@@ -42,7 +41,7 @@ base_architecture = args.base
 
 # book keeping namings and code
 from settings import img_size, prototype_shape, num_classes, \
-                     prototype_activation_function, add_on_layers_type
+                     prototype_activation_function, add_on_layers_type, prototype_activation_function_in_numpy
 
 if not base_architecture:
     from settings import base_architecture
@@ -53,13 +52,13 @@ prototype_shape = (prototype_shape[0], latent_shape, prototype_shape[2], prototy
 print(prototype_shape)
 
 model_dir = '/usr/xtmp/ct214/saved_models/' + base_architecture + '/' + experiment_run + '/'
+print(model_dir)
 makedir(model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), __file__), dst=model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), 'settings.py'), dst=model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), base_architecture_type + '_features.py'), dst=model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), 'model.py'), dst=model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), 'train_and_test.py'), dst=model_dir)
-
 log, logclose = create_logger(log_filename=os.path.join(model_dir, 'train.log'))
 img_dir = os.path.join(model_dir, 'img')
 makedir(img_dir)
@@ -195,7 +194,7 @@ for epoch in range(num_train_epochs):
     auc = tnt.test(model=ppnet_multi, dataloader=test_loader,
                     class_specific=class_specific, log=log)
     save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'nopush', accu=auc,
-                                target_accu=0.70, log=log)
+                                target_accu=0.50, log=log)
 
     train_auc.append(_)
     if currbest < auc:
@@ -224,11 +223,12 @@ for epoch in range(num_train_epochs):
             prototype_self_act_filename_prefix=prototype_self_act_filename_prefix,
             proto_bound_boxes_filename_prefix=proto_bound_boxes_filename_prefix,
             save_prototype_class_identity=True,
-            log=log)
+            log=log,
+            prototype_activation_function_in_numpy=prototype_activation_function_in_numpy)
         accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
                         class_specific=class_specific, log=log)
         save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'push', accu=accu,
-                                    target_accu=0.70, log=log)
+                                    target_accu=0.50, log=log)
 
         if prototype_activation_function != 'linear':
             tnt.last_only(model=ppnet_multi, log=log)
@@ -239,7 +239,7 @@ for epoch in range(num_train_epochs):
                 auc = tnt.test(model=ppnet_multi, dataloader=test_loader,
                                 class_specific=class_specific, log=log)
                 save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + '_' + str(i) + 'push', accu=auc,
-                                            target_accu=0.70, log=log)
+                                            target_accu=0.50, log=log)
                 train_auc.append(_)
                 test_auc.append(auc)
 

@@ -9,7 +9,6 @@ import png
 from matplotlib.pyplot import imsave, imread
 import matplotlib
 from PIL import Image
-
 matplotlib.use("Agg")
 import torchvision.datasets as datasets
 from skimage.transform import resize
@@ -747,9 +746,14 @@ if __name__ == "__main__":
     #                         "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_" + t + "_"
     #                         + pos + "_noneg/")
 
-    dirs = os.listdir("/usr/xtmp/mammo/binary_Feb/binary_context_roi/")
-    print(dirs)
-    remove_duplicates("/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated_noneg/")
+    # dirs = os.listdir("/usr/xtmp/mammo/binary_Feb/binary_context_roi/")
+    # print(dirs)
+    remove_duplicates("/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/")
+    # dataAugNumpy(path="/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_by_win/",
+    #              targetNumber=20000,
+    #              targetDir="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_no_neg_augmented_more/",
+    #              rot=True,
+    #              skip="neg")
 
     # print("start data augmenting")
 #     # for pos in ["spiculated","circumscribed", "indistinct", "microlobulated", "obscured"]:
