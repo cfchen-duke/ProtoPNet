@@ -6,7 +6,9 @@ import cv2
 from skimage.transform import resize
 import ast
 import pandas as pd
+from sklearn.metrics import roc_auc_score
 import png
+import torch
 
 
 class PDF(FPDF):
@@ -202,7 +204,7 @@ def draw_box():
     # load image
     base_dir_J = "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/test/"
     base_dir_D = "/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/test/"
-    names = ["DP_AAPL_R_CC_1", "DP_ABBF_R_CC_1", "DP_ABDH_R_ML_3"]
+    names = ["DP_ADZW_L_CC_2", "DP_AFEX_R_CC_1", "DP_AFXO_L_CC_2"]
 
     for name in names:
         if name[0] == "J":
@@ -252,7 +254,7 @@ def draw_box():
                     if len(location) % 4 != 0:
                         print("Failed because of Illegal location information ", location, " for name ", name)
                         continue
-                    for j in range(len(location) // 4):
+                    for j in range(1):
                         # if j not in mass_index:
                         #     continue
                         x1, y1, x2, y2 = location[4 * j:4 * (j + 1)]
@@ -262,10 +264,13 @@ def draw_box():
                         end_point = (y2, x2)
                         color = (0, 255, 0)
                         thickness = 5
+                        print(image.shape)
                         image = cv2.rectangle(image, start_point, end_point, color, thickness)
                         image = np.rot90(image, k=3)
                         imsave(name, image, cmap="gray")
                         print("successfully saved ", name)
+
+
 
 
 if __name__ == "__main__":
