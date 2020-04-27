@@ -754,11 +754,11 @@ if __name__ == "__main__":
     # dirs = os.listdir("/usr/xtmp/mammo/binary_Feb/binary_context_roi/")
     # # print(dirs)
     # remove_duplicates("/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/")
-    # dataAugNumpy(path="/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_by_win/",
-    #              targetNumber=20000,
-    #              targetDir="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_no_neg_augmented_more/",
-    #              rot=True,
-    #              skip="neg")
+    dataAugNumpy(path="/usr/project/xtmp/mammo/binary_Feb/sorted_by_Fides_ratings/definite/",
+                 targetNumber=20000,
+                 targetDir="/usr/project/xtmp/mammo/binary_Feb/sorted_by_Fides_ratings/definite_augmented/",
+                 rot=True,
+                 skip="neg")
 
     # print("start data augmenting")
 #     # for pos in ["spiculated","circumscribed", "indistinct", "microlobulated", "obscured"]:
@@ -767,6 +767,6 @@ if __name__ == "__main__":
 #     #         targetNumber=2000,
 #     #         targetDir="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + pos + "_noneg_augmented/",
 #     #         rot=False)
-    Fides_visualization(10)
-    Fidex_visualization_csv("fides_name_list_test.data")
+#     Fides_visualization(10)
+#     Fidex_visualization_csv("fides_name_list_test.data")
     # move_DOI_to_training()

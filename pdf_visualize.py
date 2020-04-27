@@ -254,7 +254,7 @@ def draw_box():
                     if len(location) % 4 != 0:
                         print("Failed because of Illegal location information ", location, " for name ", name)
                         continue
-                    for j in range(1):
+                    for j in range(len(location)//4):
                         # if j not in mass_index:
                         #     continue
                         x1, y1, x2, y2 = location[4 * j:4 * (j + 1)]
@@ -266,9 +266,9 @@ def draw_box():
                         thickness = 5
                         print(image.shape)
                         image = cv2.rectangle(image, start_point, end_point, color, thickness)
-                        image = np.rot90(image, k=3)
-                        imsave(name, image, cmap="gray")
-                        print("successfully saved ", name)
+                    image = np.rot90(image, k=3)
+                    imsave(name, image, cmap="gray")
+                    print("successfully saved ", name)
 
 
 
