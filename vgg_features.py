@@ -271,26 +271,26 @@ def vgg19_bn_features(pretrained=False, **kwargs):
 
 if __name__ == '__main__':
 
-    vgg11_f = vgg11_features(pretrained=True)
-    print(vgg11_f)
-
-    vgg11_bn_f = vgg11_bn_features(pretrained=True)
-    print(vgg11_bn_f)
-
-    vgg13_f = vgg13_features(pretrained=True)
-    print(vgg13_f)
-
-    vgg13_bn_f = vgg13_bn_features(pretrained=True)
-    print(vgg13_bn_f)
+    # vgg11_f = vgg11_features(pretrained=True)
+    # print(vgg11_f)
+    #
+    # vgg11_bn_f = vgg11_bn_features(pretrained=True)
+    # print(vgg11_bn_f)
+    #
+    # vgg13_f = vgg13_features(pretrained=True)
+    # print(vgg13_f)
+    #
+    # vgg13_bn_f = vgg13_bn_features(pretrained=True)
+    # print(vgg13_bn_f)
 
     vgg16_f = vgg16_features(pretrained=True)
     print(vgg16_f)
 
-    vgg16_bn_f = vgg16_bn_features(pretrained=True)
-    print(vgg16_bn_f)
-
-    vgg19_f = vgg19_features(pretrained=True)
-    print(vgg19_f)
-
-    vgg19_bn_f = vgg19_bn_features(pretrained=True)
-    print(vgg19_bn_f)
+    # vgg16_bn_f = vgg16_bn_features(pretrained=True)
+    # print(vgg16_bn_f)
+    #
+    # vgg19_f = vgg19_features(pretrained=True)
+    # print(vgg19_f)
+    #
+    # vgg19_bn_f = vgg19_bn_features(pretrained=True)
+    # print(vgg19_bn_f)

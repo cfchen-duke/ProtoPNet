@@ -20,7 +20,7 @@ def slide(image, size, stride, heatmap):
     for i in range(0, image.shape[0]-size, stride):
         for j in range(0, image.shape[1]-size, stride):
             roi = image[i:i+size, j:j+size]
-            if np.count_nonzero(np.round(image - np.amax(image), 3)) < size*size*0.6: # if over 40 percent is black
+            if np.count_nonzero(np.round(image - np.amax(image), 3)) < size*size*0.7: # if over 30 percent is black
                 continue
             roi = resize(roi, (224, 224))
             roi = np.stack([roi,roi,roi])
@@ -28,9 +28,9 @@ def slide(image, size, stride, heatmap):
             # print("roi shape is ", roi.shape)
             score, _ = model(roi)
             # print(score)
-            score = score.cpu()[0] + 2000
-            # print(score[1].item())
-            heatmap[i:i+size, j:j+size] += score[1].item()
+            score = score.cpu()[0]
+            print(score)
+            heatmap[i:i+size, j:j+size] += (score[1].item() - score[0].item() + 200)
 
 
 def window_adjustment(wwidth, wcen):
@@ -137,7 +137,7 @@ def lesionMap(save_dir, csvpath, size, stride, datapath="/usr/project/xtmp/mammo
             # print(overlayed_img.shape)
             plt.imsave(save_dir + "lesion_map_"+ name, overlayed_img)
             print("successfully saved ", name)
-            raise
+
 
 
 if __name__ == "__main__":
