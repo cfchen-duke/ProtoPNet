@@ -8,7 +8,7 @@ import cv2
 import matplotlib.pyplot as plt
 
 import re
-
+from settings import prototype_activation_function_in_numpy
 import os
 
 from helpers import makedir
@@ -128,6 +128,7 @@ find_nearest.find_k_nearest_patches_to_prototypes(
         preprocess_input_function=preprocess_input_function, # normalize if needed
         full_save=True,
         root_dir_for_saving_images=root_dir_for_saving_train_images,
+        prototype_activation_function_in_numpy=prototype_activation_function_in_numpy,
         log=print)
 
 find_nearest.find_k_nearest_patches_to_prototypes(
@@ -137,6 +138,7 @@ find_nearest.find_k_nearest_patches_to_prototypes(
         preprocess_input_function=preprocess_input_function, # normalize if needed
         full_save=True,
         root_dir_for_saving_images=root_dir_for_saving_test_images,
+        prototype_activation_function_in_numpy=prototype_activation_function_in_numpy,
         log=print)
 
 
