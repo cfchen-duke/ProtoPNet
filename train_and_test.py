@@ -121,22 +121,14 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
 
         # compute gradient and do SGD step
         if is_train:
-            if class_specific:
-                if coefs is not None:
-                    loss = (coefs['crs_ent'] * cross_entropy
-                          + coefs['clst'] * cluster_cost
-                          + coefs['sep'] * separation_cost
-                          + coefs['l1'] * l1)
-                else:
-                    loss = cross_entropy + 0.8 * cluster_cost - 0.08 * separation_cost + 1e-4 * l1
+            if coefs is not None:
+                loss = (coefs['crs_ent'] * cross_entropy
+                      + coefs['clst'] * cluster_cost
+                      + coefs['sep'] * separation_cost
+                      + coefs['l1'] * l1)
             else:
-                if coefs is not None:
-                    loss = (coefs['crs_ent'] * cross_entropy
-                          + coefs['clst'] * cluster_cost
-                          + coefs['sep'] * separation_cost
-                          + coefs['l1'] * l1)
-                else:
-                    loss = cross_entropy + 0.8 * cluster_cost + 1e-4 * l1
+                loss = cross_entropy + 0.8 * cluster_cost - 0.08 * separation_cost + 1e-4 * l1
+
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
