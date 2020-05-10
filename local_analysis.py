@@ -133,9 +133,12 @@ def save_preprocessed_img(fname, preprocessed_imgs, index=0):
     undo_preprocessed_img = undo_preprocessed_img[0]
     undo_preprocessed_img = undo_preprocessed_img.detach().cpu().numpy()
     undo_preprocessed_img = np.transpose(undo_preprocessed_img, [1,2,0])
-    
     plt.imsave(fname, resize(np.load(test_image_path), (224,224)), cmap="gray")
-    return undo_preprocessed_img
+    # return undo_preprocessed_img
+    test_image_path_channel = resize(np.load(test_image_path), (224,224))
+    test_image = np.stack([test_image_path_channel, test_image_path_channel, test_image_path_channel])
+    return np.transpose(test_image, [1,2,0])
+
 
 def save_prototype(fname, epoch, index):
     p_img = plt.imread(os.path.join(load_img_dir, 'epoch-'+str(epoch), 'prototype-img'+str(index)+'.png'))
