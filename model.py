@@ -33,13 +33,15 @@ class PPNet(nn.Module):
     def __init__(self, features, img_size, prototype_shape,
                  proto_layer_rf_info, num_classes, init_weights=True,
                  prototype_activation_function='log',
-                 add_on_layers_type='bottleneck'):
+                 add_on_layers_type='bottleneck',
+                 class_specific=False):
 
         super(PPNet, self).__init__()
         self.img_size = img_size
         self.prototype_shape = prototype_shape
         self.num_prototypes = prototype_shape[0]
         self.num_classes = num_classes
+        self.class_specific=class_specific
         self.epsilon = 1e-4
         
         # prototype_activation_function could be 'log', 'linear',
@@ -57,9 +59,12 @@ class PPNet(nn.Module):
                                                     self.num_classes)
 
         num_prototypes_per_class = self.num_prototypes // self.num_classes
-        for j in range(self.num_prototypes):
-            self.prototype_class_identity[j, 1] = 1
-
+        if not class_specific:
+            for j in range(self.num_prototypes):
+                self.prototype_class_identity[j, 1] = 1
+        else:
+            for j in range(self.num_prototypes):
+                self.prototype_class_identity[j, j // num_prototypes_per_class] = 1
         self.proto_layer_rf_info = proto_layer_rf_info
 
         # this has to be named features to allow the precise loading
@@ -199,8 +204,8 @@ class PPNet(nn.Module):
         min_distances = min_distances.view(-1, self.num_prototypes)
         prototype_activations = self.distance_2_similarity(min_distances)
         logits = self.last_layer(prototype_activations)
-        # threshold = 25
-        logits[:,0] = 0
+        if not self.class_specific:
+            logits[:,0] = 0
         return logits, min_distances
 
     def push_forward(self, x):
@@ -290,7 +295,8 @@ class PPNet(nn.Module):
 def construct_PPNet(base_architecture, pretrained=True, img_size=224,
                     prototype_shape=(2000, 512, 1, 1), num_classes=200,
                     prototype_activation_function='log',
-                    add_on_layers_type='bottleneck'):
+                    add_on_layers_type='bottleneck',
+                    class_specific=False):
     features = base_architecture_to_features[base_architecture](pretrained=pretrained)
     layer_filter_sizes, layer_strides, layer_paddings = features.conv_info()
     proto_layer_rf_info = compute_proto_layer_rf_info_v2(img_size=img_size,
@@ -305,5 +311,6 @@ def construct_PPNet(base_architecture, pretrained=True, img_size=224,
                  num_classes=num_classes,
                  init_weights=True,
                  prototype_activation_function=prototype_activation_function,
-                 add_on_layers_type=add_on_layers_type)
+                 add_on_layers_type=add_on_layers_type,
+                 class_specific=class_specific)
 

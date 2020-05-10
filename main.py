@@ -127,6 +127,7 @@ log('push set size: {0}'.format(len(train_push_loader.dataset)))
 log('test set size: {0}'.format(len(test_loader.dataset)))
 log('batch size: {0}'.format(train_batch_size))
 
+from settings import class_specific
 # construct the model
 if load_model_dir:
     ppnet = torch.load(load_model_dir)
@@ -136,12 +137,12 @@ else:
                                   prototype_shape=prototype_shape,
                                   num_classes=num_classes,
                                   prototype_activation_function=prototype_activation_function,
-                                  add_on_layers_type=add_on_layers_type)
+                                  add_on_layers_type=add_on_layers_type,
+                                  class_specific=class_specific)
 #if prototype_activation_function == 'linear':
 #    ppnet.set_last_layer_incorrect_connection(incorrect_strength=0)
 ppnet = ppnet.cuda()
 ppnet_multi = torch.nn.DataParallel(ppnet)
-from settings import class_specific
 
 # define optimizer
 from settings import joint_optimizer_lrs, joint_lr_step_size
