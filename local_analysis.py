@@ -36,15 +36,15 @@ args = parser.parse_args()
 
 test_image_dir = '/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/spiculated/'
 test_image_name = args.test_image[0] # 'DP_AAPR_R_MLO_3#0.npy'
-test_image_label = 1
+test_image_label = 4
 
 test_image_path = os.path.join(test_image_dir, test_image_name)
 
 # load the model
 check_test_accu = False
 
-load_model_dir = '/usr/project/xtmp/ct214/saved_models/vgg16/thresholdlogits0_spiculated_256_0423/'
-load_model_name = '100_6push0.5750.pth'
+load_model_dir = '/usr/project/xtmp/ct214/saved_models/resnet152/5class_DDSM_1024_0506/'
+load_model_name = '60_2push0.7705.pth'
 
 
 #if load_model_dir[-1] == '/':

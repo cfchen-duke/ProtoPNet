@@ -5,4 +5,4 @@ source /home/home2/ct214/virtual_envs/ml/bin/activate
 echo "start running"
 nvidia-smi
 
-srun -u python3 global_analysis.py -modeldir='/usr/project/xtmp/ct214/saved_models/vgg16/thresholdlogits0_spiculated_256_0423/' -model='100_6push0.5750.pth'
+srun -u python3 global_analysis.py -modeldir='/usr/project/xtmp/ct214/saved_models/resnet152/5class_DDSM_1024_0506/' -model='60_2push0.7705.pth'

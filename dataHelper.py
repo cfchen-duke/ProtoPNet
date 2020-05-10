@@ -554,12 +554,12 @@ def move_to_binary(pos, before, target):
 
 
 def move_DOI_to_training():
-    df = pd.read_csv("/usr/project/xtmp/ct214/CBIS-DDSM/mass.csv")
+    df = pd.read_csv("/usr/project/xtmp/mammo/binary_Feb/CBIS-DDSM/mass.csv")
     margins = df["mass margins"]
     roi_names = [s.split("/")[0] for s in df["cropped image file path"]]
     seen = set()
     count = 0
-    for root, dirs, files in os.walk("/usr/project/xtmp/ct214/CBIS-DDSM/"):
+    for root, dirs, files in os.walk("/usr/project/xtmp/mammo/binary_Feb/CBIS-DDSM/"):
         for file in files:
             path = os.path.join(root, file)
             name = path.split("/")[-4]
@@ -580,7 +580,7 @@ def move_DOI_to_training():
                 continue
 
             # find save directory
-            save_dir = "/usr/xtmp/mammo/binary_Feb/DDSM_five_class/" + margin + "/"
+            save_dir = "/usr/xtmp/mammo/binary_Feb/DDSM_five_class_test/" + margin + "/"
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
 
@@ -711,11 +711,12 @@ if __name__ == "__main__":
     #     dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 10000,
     #             "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_more_with_rot/")
 
-    # for pos in ["circumscribed","indistinct", "microlobulated", "obscured", "spiculated"]:
-    #     for t in ["train", "test"]:
-    #          move_to_binary(pos, "/usr/xtmp/mammo/binary_Feb/five_classes_roi/"+ t + "_context_roi/",
-    #                         "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_" + t + "_"
-    #                         + pos + "_noneg/")
+    # for pos in list(os.listdir("/usr/xtmp/mammo/binary_Feb/DDSM_five_class_augmented/")):
+    #      move_to_binary(pos, "/usr/xtmp/mammo/binary_Feb/DDSM_five_class_augmented/",
+    #                     "/usr/xtmp/mammo/binary_Feb/binary_context_roi/" + pos + "_DDSM_binary_train/")
+    # for pos in list(os.listdir("/usr/xtmp/mammo/binary_Feb/DDSM_five_class_test/")):
+    #     move_to_binary(pos, "/usr/xtmp/mammo/binary_Feb/DDSM_five_class_test/",
+    #                    "/usr/xtmp/mammo/binary_Feb/binary_context_roi/" + pos + "_DDSM_binary_test/")
 
     # dirs = os.listdir("/usr/xtmp/mammo/binary_Feb/binary_context_roi/")
     # # print(dirs)
