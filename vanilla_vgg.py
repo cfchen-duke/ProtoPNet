@@ -55,13 +55,13 @@ class Vanilla_VGG(nn.Module):
         self.features = myfeatures
         self.avgpool = nn.AdaptiveAvgPool2d((7,7))
         self.classifier = nn.Sequential(
-            nn.Linear(512*7*7, 2),
+            nn.Linear(512*7*7, 1024),
             # nn.ReLU(True),
             # nn.Dropout(),
             # nn.Linear(1024, 512),
             # nn.ReLU(True),
-            # nn.Dropout(),
-            # nn.Linear(1024, 2),
+            nn.Dropout(),
+            nn.Linear(1024, 5),
             nn.LogSoftmax(dim=0)
         )
 
@@ -88,7 +88,7 @@ train_dataset = DatasetFolder(
         torch.from_numpy,
     ]))
 trainloader = torch.utils.data.DataLoader(
-    train_dataset, batch_size=100, shuffle=True,
+    train_dataset, batch_size=16, shuffle=True,
     num_workers=4, pin_memory=False)
 
 # test set
@@ -136,7 +136,7 @@ for epoch in range(epochs):
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
-        one_hot_label = np.zeros(shape=(len(labels), 2))
+        one_hot_label = np.zeros(shape=(len(labels), 5))
         for k in range(len(labels)):
             one_hot_label[k][labels[k].item()] = 1
         # roc_auc_score()
@@ -174,7 +174,7 @@ for epoch in range(epochs):
             logps = model.forward(inputs)
             batch_loss = criterion(logps, labels)
             test_loss += batch_loss.item()
-            one_hot_label = np.zeros(shape=(len(labels), 2))
+            one_hot_label = np.zeros(shape=(len(labels), 5))
             for k in range(len(labels)):
                 one_hot_label[k][labels[k].item()] = 1
             # roc_auc_score()

@@ -12,7 +12,7 @@ args = parser.parse_args()
 image_names = args.image[0]
 
 for image_name in image_names.split(" "):
-    test_dir = "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/normalized_rois/binary_context_roi/binary_test_spiculated/spiculated/" + image_name
+    test_dir = "/usr/project/xtmp/mammo/binary_Feb/sorted_by_Fides_ratings/definite_augmented/definitely_positive/" + image_name
     print(test_dir)
     arr = np.load(test_dir)
     print(arr.shape)

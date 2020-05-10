@@ -9,7 +9,6 @@ import png
 from matplotlib.pyplot import imsave, imread
 import matplotlib
 from PIL import Image
-
 matplotlib.use("Agg")
 import torchvision.datasets as datasets
 from skimage.transform import resize
@@ -212,96 +211,57 @@ def cleanup(dir):
 
 
 def dataAugNumpy(path, targetNumber, targetDir, skip=None, rot=True):
-    class1, class2 = os.listdir(path)
+    classes = os.listdir(path)
     if not os.path.exists(targetDir):
         os.mkdir(targetDir)
-    if not os.path.exists(targetDir + class1):
-        os.mkdir(targetDir + class1)
-    if not os.path.exists(targetDir + class2):
-        os.mkdir(targetDir + class2)
-    count = 0
-    round = 0
-    while count < targetNumber:
-        round += 1
-        for root, dir, files in os.walk(os.path.join(path, class1)):
-            for file in files:
-                if skip and skip in file:
-                    continue
-                filepath = os.path.join(root, file)
-                arr = np.load(filepath)
-                try:
-                    arr = random_crop(arr)
-                    if rot:
-                        arr = random_rotation(arr, 0.9)
-                    arr = random_flip(arr, 0)
-                    arr = random_flip(arr, 1)
-                    arr = random_rotate_90(arr)
-                    arr = random_rotate_90(arr)
-                    arr = random_rotate_90(arr)
-                    # arr = random_rotation(arr, 0.9)
+    for class_ in classes:
+        if not os.path.exists(targetDir + class_):
+            os.mkdir(targetDir + class_)
 
-                    whites = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr - np.amax(arr), 2))
-                    black = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr, 2))
-                    if arr.shape[0] < 10 or arr.shape[1] < 10 or black >= arr.shape[0] * arr.shape[1] * 0.8 or \
-                            whites >= arr.shape[0] * arr.shape[1] * 0.8:
-                        print("illegal content")
+    for class_ in classes:
+        count, round = 0, 0
+        while count < targetNumber:
+            round += 1
+            for root, dir, files in os.walk(os.path.join(path, class_)):
+                for file in files:
+                    if skip and skip in file:
                         continue
-                    if count % 1500 == 0:
-                        if not os.path.exists("./visualizations_of_augmentation/" + class2 + class1 + "/"):
-                            os.makedirs("./visualizations_of_augmentation/" + class2 + class1 + "/")
-                        imsave("./visualizations_of_augmentation/" + class2 + class1 + "/" + str(count), arr,
-                               cmap="gray")
-                    np.save(targetDir + class1 + "/" + file[:-4] + "aug" + str(round), arr)
+                    filepath = os.path.join(root, file)
+                    arr = np.load(filepath)
+                    try:
+                        arr = random_crop(arr)
+                        if rot:
+                            arr = random_rotation(arr, 0.9)
+                        arr = random_flip(arr, 0)
+                        arr = random_flip(arr, 1)
+                        arr = random_rotate_90(arr)
+                        arr = random_rotate_90(arr)
+                        arr = random_rotate_90(arr)
+                        # arr = random_rotation(arr, 0.9)
 
-                    count += 1
-                    print(count)
-                except:
-                    if not os.path.exists("./error_of_augmentation/" + class2 + "/"):
-                        os.makedirs("./error_of_augmentation/" + class2 + "/")
-                    np.save("./error_of_augmentation/" + class2 + "/" + str(count), arr)
-                if count > targetNumber:
-                    break
-    print(count)
-    count = 0
-    round = 0
-    while count < targetNumber:
-        round += 1
-        for root, dir, files in os.walk(os.path.join(path, class2)):
-            for file in files:
-                if skip and skip in file:
-                    continue
-                filepath = os.path.join(root, file)
-                arr = np.load(filepath)
-                try:
-                    arr = random_rotation(arr, 0.9)
-                    arr = random_flip(arr, 0)
-                    arr = random_flip(arr, 1)
-                    arr = random_rotate_90(arr)
-                    arr = random_rotate_90(arr)
-                    arr = random_rotate_90(arr)
-                    # arr = random_rotation(arr, 0.9)
+                        whites = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr - np.amax(arr), 2))
+                        black = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr, 2))
 
-                    whites = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr - np.amax(arr), 2))
-                    black = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr, 2))
-                    if arr.shape[0] < 10 or arr.shape[1] < 10 or black >= arr.shape[0] * arr.shape[1] * 0.8 or \
-                            whites >= arr.shape[0] * arr.shape[1] * 0.8:
-                        print("illegal content")
-                        continue
-                    if count % 150 == 0:
-                        if not os.path.exists("./visualizations_of_augmentation/" + class2 + "/"):
-                            os.makedirs("./visualizations_of_augmentation/" + class2 + "/")
-                        imsave("./visualizations_of_augmentation/" + class2 + "/" + str(count), arr, cmap="gray")
+                        if arr.shape[0] < 10 or arr.shape[1] < 10 or black >= arr.shape[0] * arr.shape[1] * 0.8 or \
+                                whites >= arr.shape[0] * arr.shape[1] * 0.8:
+                            print("illegal content")
+                            continue
 
-                    np.save(targetDir + class2 + "/" + file[:-4] + "aug" + str(round), arr)
+                        if count % 1500 == 0:
+                            if not os.path.exists("./visualizations_of_augmentation/" + class_ + "/"):
+                                os.makedirs("./visualizations_of_augmentation/" + class_ + "/")
+                            imsave("./visualizations_of_augmentation/" + class_ + "/" + str(count), arr,
+                                   cmap="gray")
 
-                    count += 1
-                except:
-                    if not os.path.exists("./error_of_augmentation/" + class2 + "/"):
-                        os.makedirs("./error_of_augmentation/" + class2 + "/")
-                    np.save("./error_of_augmentation/" + class2 + "/" + str(count), arr)
-
-                if count > targetNumber:
-                    break
+                        np.save(targetDir + class_ + "/" + file[:-4] + "aug" + str(round), arr)
+                        count += 1
+                        print(count)
+                    except:
+                        if not os.path.exists("./error_of_augmentation/" + class_ + "/"):
+                            os.makedirs("./error_of_augmentation/" + class_ + "/")
+                        np.save("./error_of_augmentation/" + class_ + "/" + str(count), arr)
+                    if count > targetNumber:
+                        break
     print(count)
 
 
@@ -549,13 +509,10 @@ def crop_negative_patches(target, datapath):
                     for index, roi in enumerate([neg1, neg2, neg3, neg4, neg5, neg6, neg7, neg8]):
                         if roi.shape[0] > 10 and roi.shape[1] > 10 and np.count_nonzero(roi) > roi.shape[0] * \
                                 roi.shape[1] * 0.7:
-
                             np.save(target + "binary_test_" + margin + "/allneg/" + name[:-4] +
-
                                     "#" + str(j) + "neg" + str(index) + ".npy",
                                     roi)
                             count += 1
-
 
                 print("successfully saved neg ", name, " . Have saved ", count, " total")
 
@@ -595,17 +552,14 @@ def move_to_binary(pos, before, target):
                 print("successfully saved ", file_name, " . Have saved ", count, " total for neg: " + pos)
 
 
-def DOI_moving_helper(positive_class, arr):
-    base_dir = "/usr/xtmp/mammo/binary_Feb/binary_context_roi/"
-
 
 def move_DOI_to_training():
-    df = pd.read_csv("/usr/project/xtmp/ct214/CBIS-DDSM//mass.csv")
+    df = pd.read_csv("/usr/project/xtmp/mammo/binary_Feb/CBIS-DDSM/mass.csv")
     margins = df["mass margins"]
     roi_names = [s.split("/")[0] for s in df["cropped image file path"]]
     seen = set()
     count = 0
-    for root, dirs, files in os.walk("/usr/project/xtmp/ct214/CBIS-DDSM/"):
+    for root, dirs, files in os.walk("/usr/project/xtmp/mammo/binary_Feb/CBIS-DDSM/"):
         for file in files:
             path = os.path.join(root, file)
             name = path.split("/")[-4]
@@ -626,16 +580,15 @@ def move_DOI_to_training():
                 continue
 
             # find save directory
-            # first detect spiculated, then circumscribed, then obscured, then microlobulated, then ill-defined, then other
+            save_dir = "/usr/xtmp/mammo/binary_Feb/DDSM_five_class_test/" + margin + "/"
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
 
-            if "SPICULATED" in margin:
-                save_dir = "/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_by_win/spiculated/"
-            else:
-                save_dir = "/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated_augmented_by_win/allneg/"
-
+            # dont save duplicates for now
             if name in seen:
                 continue
             seen.add(name)
+
             # read in dcm files
             ds = dcm.read_file(path)
             image = ds.pixel_array
@@ -644,6 +597,12 @@ def move_DOI_to_training():
             np.save(save_dir + name[14:], image)
             count += 1
             print(count)
+
+            # visualize some of it
+
+            if count %50==0:
+                imsave("./visualizations_of_augmentation/"+name[14:], image, cmap="gray")
+
     print("saved ", count, " images in total")
     # print(name[14:])
 
@@ -654,17 +613,18 @@ def Fides_visualization(size):
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
     for root, dir, files in os.walk(
-            "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_spiculated/spiculated/"):
+            "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/spiculated/"):
         for file in files:
             if file.endswith(".npy"):
                 path = os.path.join(root, file)
                 paths.append(path)
 
     paths.sort()
-    with open("fides_name_list.data", "wb") as filehandle:
+    with open("fides_name_list_test.data", "wb") as filehandle:
         pickle.dump(paths, filehandle)
     tosave = np.zeros((size * 250, size * 250))
     index = 0
+    index_ = 1
     for path in paths:
         arr = np.load(path)
         arr = resize(arr, (224, 224))
@@ -672,18 +632,21 @@ def Fides_visualization(size):
         tosave[(index // size) * 250:(index // size) * 250 + 250, (index % size) * 250:(index % size) * 250 + 250] = arr
         index += 1
         if index == size * size:
-            # imsave(save_dir+ "/upto_"+path[-14:-4], tosave, cmap="gray")
+            imsave(save_dir+ "/"+str(index_), tosave, cmap="gray")
             tosave = np.zeros((size * 250, size * 250))
-            print(path[-14:-4])
+            index_ += 1
             index = 0
             print("Saved!")
+    imsave(save_dir + "/last", tosave, cmap="gray")
+    print("Saved!")
+
 
 
 def Fidex_visualization_csv(dir):
     with open(dir, "rb") as filehandle:
         paths = pickle.load(filehandle)
 
-    with open("fides.csv", "w") as csv_file:
+    with open("fides_test.csv", "w") as csv_file:
         fieldnames = ["img name", "mega image label", "row", "col", "spiculated? 1 - yes, 0 - no, 2 - unsure",
                       "Good, prototypical example to display? 1 - yes, 0 - no"]
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
@@ -696,10 +659,11 @@ def Fidex_visualization_csv(dir):
                              "col": str(i % 10 + 1),
                              })
 
+
 def remove_duplicates(dir):
-    temp = list(os.listdir(dir))
-    temp.sort()
-    class1, class2 = temp
+    classes = list(os.listdir(dir))
+    classes.sort()
+    class1, class2 = classes
     print(class1, class2)
     path = os.path.join(dir, class2)
     seen = set()
@@ -737,10 +701,8 @@ if __name__ == "__main__":
     #         datapath="/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/test/",
     #         csvpath="/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
 
-
     # crop_negative_patches("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/",
     #                       datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/test/")
-
 
     # for margin in ["spiculated", "circumscribed", "obscured", "microlobulated", "indistinct"]:
     #     dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 50000,
@@ -749,25 +711,29 @@ if __name__ == "__main__":
     #     dataAugNumpy("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_by_win/", 10000,
     #             "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + margin + "_augmented_more_with_rot/")
 
-    # for pos in ["circumscribed","indistinct", "microlobulated", "obscured", "spiculated"]:
-    #     for t in ["train", "test"]:
-    #          move_to_binary(pos, "/usr/xtmp/mammo/binary_Feb/five_classes_roi/"+ t + "_context_roi/",
-    #                         "/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_" + t + "_"
-    #                         + pos + "_noneg/")
+    # for pos in list(os.listdir("/usr/xtmp/mammo/binary_Feb/DDSM_five_class_augmented/")):
+    #      move_to_binary(pos, "/usr/xtmp/mammo/binary_Feb/DDSM_five_class_augmented/",
+    #                     "/usr/xtmp/mammo/binary_Feb/binary_context_roi/" + pos + "_DDSM_binary_train/")
+    # for pos in list(os.listdir("/usr/xtmp/mammo/binary_Feb/DDSM_five_class_test/")):
+    #     move_to_binary(pos, "/usr/xtmp/mammo/binary_Feb/DDSM_five_class_test/",
+    #                    "/usr/xtmp/mammo/binary_Feb/binary_context_roi/" + pos + "_DDSM_binary_test/")
 
-    dirs = os.listdir("/usr/xtmp/mammo/binary_Feb/binary_context_roi/")
-    print(dirs)
-    remove_duplicates("/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated_noneg/")
+    # dirs = os.listdir("/usr/xtmp/mammo/binary_Feb/binary_context_roi/")
+    # # print(dirs)
+    # # remove_duplicates("/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/")
+    dataAugNumpy(path="/usr/project/xtmp/mammo/binary_Feb/DDSM_five_class/",
+                 targetNumber=3000,
+                 targetDir="/usr/project/xtmp/mammo/binary_Feb/DDSM_five_class_augmented/",
+                 rot=True,
+                 skip=None)
 
     # print("start data augmenting")
-
 #     # for pos in ["spiculated","circumscribed", "indistinct", "microlobulated", "obscured"]:
 #     #     dataAugNumpy(
 #     #         path="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + pos + "_noneg/",
 #     #         targetNumber=2000,
 #     #         targetDir="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + pos + "_noneg_augmented/",
 #     #         rot=False)
-
-    # Fides_visualization(10)
-    # Fidex_visualization_csv("fides_name_list.data")
-    # move_DOI_to_training()
+#     Fides_visualization(10)
+#     Fidex_visualization_csv("fides_name_list_test.data")
+#     move_DOI_to_training()

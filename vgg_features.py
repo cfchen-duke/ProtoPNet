@@ -17,7 +17,7 @@ model_dir = './pretrained_models'
 cfg = {
     'A': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
     'B': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
-    'D': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
+    'D': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'end'],
     'E': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M'],
 }
 
@@ -68,7 +68,7 @@ class VGG_features(nn.Module):
                 self.strides.append(2)
                 self.paddings.append(0)
 
-            else:
+            elif v != "end":
                 conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
                 if batch_norm:
                     layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
@@ -271,26 +271,26 @@ def vgg19_bn_features(pretrained=False, **kwargs):
 
 if __name__ == '__main__':
 
-    vgg11_f = vgg11_features(pretrained=True)
-    print(vgg11_f)
-
-    vgg11_bn_f = vgg11_bn_features(pretrained=True)
-    print(vgg11_bn_f)
-
-    vgg13_f = vgg13_features(pretrained=True)
-    print(vgg13_f)
-
-    vgg13_bn_f = vgg13_bn_features(pretrained=True)
-    print(vgg13_bn_f)
+    # vgg11_f = vgg11_features(pretrained=True)
+    # print(vgg11_f)
+    #
+    # vgg11_bn_f = vgg11_bn_features(pretrained=True)
+    # print(vgg11_bn_f)
+    #
+    # vgg13_f = vgg13_features(pretrained=True)
+    # print(vgg13_f)
+    #
+    # vgg13_bn_f = vgg13_bn_features(pretrained=True)
+    # print(vgg13_bn_f)
 
     vgg16_f = vgg16_features(pretrained=True)
     print(vgg16_f)
 
-    vgg16_bn_f = vgg16_bn_features(pretrained=True)
-    print(vgg16_bn_f)
-
-    vgg19_f = vgg19_features(pretrained=True)
-    print(vgg19_f)
-
-    vgg19_bn_f = vgg19_bn_features(pretrained=True)
-    print(vgg19_bn_f)
+    # vgg16_bn_f = vgg16_bn_features(pretrained=True)
+    # print(vgg16_bn_f)
+    #
+    # vgg19_f = vgg19_features(pretrained=True)
+    # print(vgg19_f)
+    #
+    # vgg19_bn_f = vgg19_bn_features(pretrained=True)
+    # print(vgg19_bn_f)
