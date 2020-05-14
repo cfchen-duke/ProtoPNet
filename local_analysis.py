@@ -27,7 +27,7 @@ import pandas as pd
 import ast
 import png
 
-k=1
+k=5
 # specify the test image to be analyzed
 parser = argparse.ArgumentParser()
 parser.add_argument('-test_image', nargs=1, type=str, default='0')
@@ -43,9 +43,8 @@ test_image_path = os.path.join(test_image_dir, test_image_name)
 # load the model
 check_test_accu = False
 
-load_model_dir = '/usr/project/xtmp/ct214/saved_models/resnet152/5class_DDSM_1024_0506/'
-load_model_name = '60_2push0.7705.pth'
-
+load_model_dir = '/usr/project/xtmp/ct214/saved_models/resnet152/5class_DDSM_1024_0506_pushonLo/'
+load_model_name = '50_7push0.6512.pth'
 
 #if load_model_dir[-1] == '/':
 #    model_base_architecture = load_model_dir.split('/')[-3]

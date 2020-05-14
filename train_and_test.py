@@ -149,8 +149,10 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
         log('\tavg separation:\t{0}'.format(total_avg_separation_cost / n_batches))
 
     avg_auc = 0
-    avg_auc += roc_auc_score(np.array(total_one_hot_label), np.array(total_output))
-    log("\tauc score is: \t\t{}".format(avg_auc))
+    for auc_idx in range(len(total_one_hot_label[0])):
+        avg_auc += roc_auc_score(np.array(total_one_hot_label)[:, auc_idx], np.array(total_output)[:, auc_idx]) / len(total_one_hot_label[0])
+        log("\tauc score for class {} is: \t\t{}".format(auc_idx,
+                                                         roc_auc_score(np.array(total_one_hot_label)[:, auc_idx], np.array(total_output)[:, auc_idx])))
 
     log('\taccu: \t\t{0}%'.format(n_correct / n_examples * 100))
     log('\tl1: \t\t{0}'.format(model.module.last_layer.weight.norm(p=1).item()))

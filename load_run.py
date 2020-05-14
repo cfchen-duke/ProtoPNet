@@ -43,17 +43,13 @@ def main(test_dir, model_dir, model_name):
     model_base_architecture = load_model_dir.split('/')[-3]
     experiment_run = load_model_dir.split('/')[-2]
 
-
-
     load_model_path = os.path.join(load_model_dir, load_model_name)
-    epoch_number_str = re.search(r'\d+', load_model_name).group(0)
-    start_epoch_number = int(epoch_number_str)
 
     print('load model from ' + load_model_path)
     print('model base architecture: ' + model_base_architecture)
     print('experiment run: ' + experiment_run)
 
-    ppnet = torch.load(load_model_path)
+    ppnet = torch.load(load_model_path,map_location=torch.device('cpu'))
     ppnet = ppnet.cuda()
     ppnet_multi = torch.nn.DataParallel(ppnet)
 
@@ -149,9 +145,9 @@ def draw_roc_curve(data_path, model_path, image_name):
     plt.savefig(image_name)
 
 if __name__=="__main__":
-    main(test_dir="/usr/project/xtmp/mammo/binary_Feb/sorted_by_Fides_ratings/definite_bad/",
-         model_dir="/usr/project/xtmp/ct214/saved_models/vgg16/thresholdlogits25_spiculated_with_negs_0415/",
-         model_name="40_9push0.8829.pth")
+    main(test_dir="/usr/project/xtmp/mammo/binary_Feb/DDSM_five_class_test/",
+         model_dir="/usr/project/xtmp/ct214/saved_models/resnet152/5class_DDSM_1024_0506_pushonLo/",
+         model_name="50_7push0.6512.pth")
     # draw_roc_curve("/usr/xtmp/mammo/binary_Feb/lesion_or_not_test/",
     #                "/usr/project/xtmp/ct214/saved_models/vgg16/thresholdlogits25_lesion_512_0419/10_3push0.9792.pth",
     #                image_name="lesion")
