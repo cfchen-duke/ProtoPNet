@@ -87,6 +87,7 @@ def push_prototypes(dataloader, # pytorch dataloader (must be unnormalized in [0
                                    global_min_fmap_patches,
                                    proto_rf_boxes,
                                    proto_bound_boxes,
+                                   patient_id=patient_id,
                                    class_specific=class_specific,
                                    search_y=search_y,
                                    num_classes=num_classes,
@@ -115,6 +116,7 @@ def push_prototypes(dataloader, # pytorch dataloader (must be unnormalized in [0
 def update_prototypes_on_batch(search_batch_input,
                                start_index_of_search_batch,
                                prototype_network_parallel,
+                               patient_id,
                                global_min_proto_dist, # this will be updated
                                global_min_fmap_patches, # this will be updated
                                proto_rf_boxes, # this will be updated
@@ -270,8 +272,11 @@ def update_prototypes_on_batch(search_batch_input,
                     plt.imsave(os.path.join(dir_for_saving_prototypes,
                                             prototype_img_filename_prefix + '-original' + str(j) + '.png'),
                                original_img_j,
-                               vmin=0.0,
-                               vmax=1.0)
+                               cmap='gray')
+                    # write the patient ID info down
+                    with open(os.path.join(dir_for_saving_prototypes,
+                                           prototype_img_filename_prefix + '-lookup' + str(j) + '.txt'), "w") as f:
+                        f.write(str(patient_id[img_index_in_batch]))
                     # overlay (upsampled) self activation on original image and save the result
                     rescaled_act_img_j = upsampled_act_img_j - np.amin(upsampled_act_img_j)
                     rescaled_act_img_j = rescaled_act_img_j / np.amax(rescaled_act_img_j)

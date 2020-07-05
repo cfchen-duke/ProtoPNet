@@ -30,23 +30,21 @@ class PDF(FPDF):
         # Page number
         self.cell(0, 10, 'Page ' + str(self.page_no()) + '/{nb}', 0, 0, 'C')
 
-
-
-def lookup(patient_id, target, prototype_index):
+def lookup(patient_id, target, prototype_index, excel_dir, file_dir):
     """
     Look up patient in the database, crop out the region of interest, original image with rectangle,
     and ROI to the current dir
     :param patient: patient ID
     :return: size of ROI, class
     """
-    df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
+    df = pd.read_excel(excel_dir)
     locations = df['Box_List']
     win_width = df['Win_Width']
     win_cen = df['Win_Center']
     names = list(df["File_Name"])
     test_image_name = patient_id + ".png"
     i = names.index(test_image_name)
-    for root, dir, files in os.walk("/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/train/"):
+    for root, dir, files in os.walk(file_dir):
         for file in files:
             # find the index of the name
             path = os.path.join(root, file)
@@ -88,11 +86,8 @@ def lookup(patient_id, target, prototype_index):
                              min(image.shape[0], max(x1, x2) + 100), min(image.shape[1], max(y1, y2) + 100)
             # x1, y1 = midx - target_size//2, midy - target_size//2
             # x2, y2 = x1 + target_size, y1 + target_size
-            start_point = (y1, x1)
-            end_point = (y2, x2)
-            color = (0, 255, 0)
+            start_point, end_point, thickness, color = (y1, x1), (y2, x2), 5, (0, 255, 0)
             roi = image[x1:x2, y1:y2]
-            thickness = 5
             image = cv2.rectangle(image, start_point, end_point, color, thickness)
             image = np.rot90(image, k=3)
             imsave(target + "original_prototype_" + str(prototype_index) + ".png", image, cmap="gray")
@@ -104,7 +99,7 @@ def lookup(patient_id, target, prototype_index):
 
 
 
-def generate_pdf(test_dir, num_of_protos):
+def generate_pdf(test_dir, num_of_protos, excel_dir, file_dir, classes=['allneg', 'other'], ):
     """
     Generate a pdf visualization of prototypes for a specific testing image
     :param test_dir: the saving directory of local_analysis.py
@@ -132,7 +127,7 @@ def generate_pdf(test_dir, num_of_protos):
     pdf.image(test_dir + "original_part_" + pdf.id +".png", w=100)
     pdf.ln(20)
 
-    # prototypes  with heatmap (itself and ROI)
+    # prototypes with heatmap (itself and ROI)
     # avoid identical prototypes
     seen_id = set()
     for i in range(1, 20):
@@ -140,20 +135,17 @@ def generate_pdf(test_dir, num_of_protos):
             line = f.readline()
             patient_id = line[:-3]
             class_info = line[-1]
-        #candidates = ["other", "spiculated"]
-        candidates = ["allneg", "lesion"]
-        candidates.sort()
-        class_info = candidates[int(class_info)]
+        classes.sort()
+        class_info = classes[int(class_info)]
 
 #        if class_info=="other":
 #            continue
-        print(patient_id)
         if patient_id in seen_id:
             continue
         seen_id.add(patient_id)
         # get size
         try:
-          [h, w]= lookup(patient_id,test_dir + "/most_activated_prototypes/" , i)
+          [h, w]= lookup(patient_id, test_dir + "/most_activated_prototypes/" , i, excel_dir, file_dir)
         except ValueError:
           continue
         pdf.add_page()
@@ -180,10 +172,10 @@ def generate_pdf(test_dir, num_of_protos):
                                    "_activated_prototype_self_act.png")
         generated_by_push = imread(test_dir + "most_activated_prototypes/top-" + str(i) +
                                    "_activated_prototype.png")
-        heatmap = (generated_by_push_heat - 0.5 * generated_by_push)
-        #heatmap = (generated_by_push_heat -  0.8*generated_by_push)
-        original_roi = resize(original_roi, (224,224))
-        generated_heatmap = heatmap + original_roi*0.8
+        # heatmap = (generated_by_push_heat - 0.5 * generated_by_push)
+        heatmap = (generated_by_push_heat -  generated_by_push)
+        # original_roi = resize(original_roi, (224,224))
+        generated_heatmap = heatmap/0.3
         imsave(test_dir + "/most_activated_prototypes/" + "roi_prototype_" + str(i) + "heatmap.png", generated_heatmap,
                cmap="gray")
 
@@ -276,7 +268,7 @@ def draw_box():
 if __name__ == "__main__":
     # Instantiation of inherited class
     #test_dir = "/usr/project/xtmp/ct214/model_visualization_result/spiculated/resnet34/MassMarginROI_1028_3/resume_from_140/140_3push0.7310.pth/JMAFE_4_RMLO_D-9.npy/"
-    # test_dir = "/usr/xtmp/ct214/model_visualization_result/spiculated/resnet152/LesionNoLesion_0212_1/20_20push0.9380.pth/JMAEG_1_LCC_D-7.npy/"
+    # test_dir = ""[
     # num_of_protos = 3
     # generate_pdf(test_dir, num_of_protos)
     draw_box()

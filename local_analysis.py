@@ -249,6 +249,11 @@ for i in range(1,11):
     if prototype_max_connection[sorted_indices_act[-i].item()] != prototype_img_identity[sorted_indices_act[-i].item()]:
         log('prototype connection identity: {0}'.format(prototype_max_connection[sorted_indices_act[-i].item()]))
     log('activation value (similarity score): {0}'.format(array_act[-i]))
+
+    f = open(save_analysis_path + '/most_activated_prototypes/' + 'top-' + str(i) + '_activated_prototype.txt', "w")
+    f.write(str(array_act[-i].item()))
+    f.close()
+
     log('last layer connection with predicted class: {0}'.format(ppnet.last_layer.weight[predicted_cls][sorted_indices_act[-i].item()]))
     
     activation_pattern = prototype_activation_patterns[idx][sorted_indices_act[-i].item()].detach().cpu().numpy()
@@ -369,9 +374,9 @@ else:
     log('Prediction is wrong.')
 print("saved in ", save_analysis_path)
 
-def visualize_origninal_image(test_image_name):
+def visualize_origninal_image(test_image_name, excel_dir, files_dir):
     # visualize the original mammogram
-    df = pd.read_excel("/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/no_PHI_Sept.xlsx")
+    df = pd.read_excel(excel_dir)
     locations = df['Box_List']
     win_width = df['Win_Width']
     win_cen = df['Win_Center']
@@ -379,7 +384,7 @@ def visualize_origninal_image(test_image_name):
     test_image_name = test_image_name.split(".")[0] + ".png"
     i = names.index(test_image_name)
     for root, dir, files in os.walk(
-            "/usr/project/xtmp/mammo/rawdata/Sept2019/JM_Dataset_Final/sorted_by_mass_edges_Sept/" + train_or_test + "/"):
+            files_dir):
         for file in files:
             # find the index of the name
             path = os.path.join(root, file)
