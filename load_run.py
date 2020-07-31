@@ -1,9 +1,6 @@
-##### MODEL AND DATA LOADING
 import torch
 import torch.utils.data
 import torchvision.transforms as transforms
-import torchvision.datasets as datasets
-from torch.autograd import Variable
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
@@ -12,14 +9,7 @@ from dataHelper import DatasetFolder
 import re
 import numpy as np
 import os
-import copy
-from skimage.transform import resize
-from helpers import makedir, find_high_activation_crop
-import model
-import push
 import train_and_test as tnt
-import save
-from sklearn.metrics import roc_auc_score
 from sklearn.metrics import roc_curve, auc
 from preprocess import mean, std, preprocess_input_function, undo_preprocess_input_function
 
@@ -83,7 +73,7 @@ def main(test_dir, model_dir, model_name):
         accu = tnt.test(model=ppnet_multi, dataloader=test_loader, class_specific=class_specific, log=print)
         print(accu)
 
-def draw_roc_curve(data_path, model_path, image_name):
+def draw_roc_curve(data_path, model_path, image_name, target_class, num_classes):
     model = torch.load(model_path)
     test_dataset = DatasetFolder(
         data_path,
@@ -107,12 +97,10 @@ def draw_roc_curve(data_path, model_path, image_name):
         # torch.enable_grad() has no effect outside of no_grad()
         grad_req = torch.no_grad()
         with grad_req:
-            # nn.Module has implemented __call__() function
-            # so no need to call .forward
             output, min_distances = model(input)
 
             # one hot label for AUC
-            one_hot_label = np.zeros(shape=(len(target), 2))
+            one_hot_label = np.zeros(shape=(len(target), num_classes))
             for k in range(len(target)):
                 one_hot_label[k][target[k].item()] = 1
 
@@ -127,30 +115,88 @@ def draw_roc_curve(data_path, model_path, image_name):
     fpr = dict()
     tpr = dict()
     roc_auc = dict()
-    for i in range(2):
+    for i in range(num_classes):
         fpr[i], tpr[i], _ = roc_curve(total_one_hot_label[:, i], total_output[:, i])
         roc_auc[i] = auc(fpr[i], tpr[i])
     plt.figure()
     print("saving!!!!")
     lw = 2
-    plt.plot(fpr[1], tpr[1], color='darkorange',
-             lw=lw, label='ROC curve (area = %0.2f)' % roc_auc[1])
-    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+    plt.plot(fpr[target_class], tpr[target_class], color='red',
+             lw=lw, label='ROC curve with context (area = %0.2f)' % roc_auc[target_class])
+    # plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+    # plt.xlim([0.0, 1.0])
+    # plt.ylim([0.0, 1.05])
+    # plt.xlabel('False Positive Rate')
+    # plt.ylabel('True Positive Rate')
+    # plt.title('AUC')
+    # plt.legend(loc="lower right")
+    # plt.savefig(image_name)
+
+
+
+    model = torch.load("/usr/project/xtmp/ct214/saved_models/resnet152/5class_DDSM_1024_0517_neglogit-0.5sep-0.08/50_9push0.6072.pth")
+    test_dataset = DatasetFolder(
+        "/usr/project/xtmp/mammo/DDSM-context-test/",
+        augmentation=False,
+        loader=np.load,
+        extensions=("npy",),
+        transform=transforms.Compose([
+            torch.from_numpy,
+        ])
+    )
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset, batch_size=100, shuffle=True,
+        num_workers=4, pin_memory=False)
+
+    total_one_hot_label, total_output = [], []
+    for i, (image, label, patient_id) in enumerate(test_loader):
+        input = image.cuda()
+        target = label.cuda()
+
+        # torch.enable_grad() has no effect outside of no_grad()
+        grad_req = torch.no_grad()
+        with grad_req:
+            output, min_distances = model(input)
+
+            # one hot label for AUC
+            one_hot_label = np.zeros(shape=(len(target), num_classes))
+            for k in range(len(target)):
+                one_hot_label[k][target[k].item()] = 1
+
+            prob = torch.nn.functional.softmax(output, dim=1)
+            total_output.extend(prob.data.cpu().numpy())
+            total_one_hot_label.extend(one_hot_label)
+
+    total_output = np.array(total_output)
+    total_one_hot_label = np.array(total_one_hot_label)
+    print(total_output[:5])
+    # Compute ROC curve and ROC area for each class
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    for i in range(num_classes):
+        fpr[i], tpr[i], _ = roc_curve(total_one_hot_label[:, i], total_output[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+    print("saving!!!!")
+    lw = 2
+    plt.plot(fpr[target_class], tpr[target_class], 'b--',
+             lw=lw, label='ROC curve no context(area = %0.2f)' % roc_auc[target_class])
+    plt.plot([0, 1], [0, 1], color='k', lw=lw, linestyle='--')
     plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
+    plt.ylim([0.0, 1.0])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title('AUC')
+    # plt.title('AUC')
     plt.legend(loc="lower right")
     plt.savefig(image_name)
 
 if __name__=="__main__":
-    main(test_dir="/usr/project/xtmp/mammo/binary_Feb/DDSM_five_class_test/",
-         model_dir="/usr/project/xtmp/ct214/saved_models/resnet152/5class_DDSM_1024_0506_pushonLo/",
-         model_name="50_7push0.6512.pth")
-    # draw_roc_curve("/usr/xtmp/mammo/binary_Feb/lesion_or_not_test/",
-    #                "/usr/project/xtmp/ct214/saved_models/vgg16/thresholdlogits25_lesion_512_0419/10_3push0.9792.pth",
-    #                image_name="lesion")
-    # draw_roc_curve("/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/",
-    #                "/usr/project/xtmp/ct214/saved_models/vgg16/thresholdlogits25_spiculated_with_negs_0415/40_7push0.8829.pth",
-    #                image_name="spiculation")
+    # main(test_dir="/usr/project/xtmp/mammo/binary_Feb/DDSM_five_class_test/",
+    #      model_dir="/usr/project/xtmp/ct214/saved_models/resnet152/5class_DDSM_1024_0506_pushonLo/",
+    #      model_name="50_7push0.6512.pth")
+    draw_roc_curve("/usr/project/xtmp/mammo/DDSM-context-test/",
+                   "/usr/project/xtmp/ct214/saved_models/resnet152/DDSM_context_1024_0618/90_6push0.6458.pth",
+                   image_name="withContextCompare", target_class=4, num_classes=5)
+    # draw_roc_curve("/usr/project/xtmp/mammo/DDSM-context-test/",
+    #                "/usr/project/xtmp/ct214/saved_models/resnet152/5class_DDSM_1024_0517_neglogit-0.5sep-0.08/50_9push0.6072.pth",
+    #                image_name="noContext", target_class=4, num_classes=5)
