@@ -116,11 +116,11 @@ def push_prototypes(dataloader, # pytorch dataloader (must be unnormalized in [0
 def update_prototypes_on_batch(search_batch_input,
                                start_index_of_search_batch,
                                prototype_network_parallel,
-                               patient_id,
                                global_min_proto_dist, # this will be updated
                                global_min_fmap_patches, # this will be updated
                                proto_rf_boxes, # this will be updated
                                proto_bound_boxes, # this will be updated
+                               patient_id=None,
                                class_specific=True,
                                search_y=None, # required if class_specific == True
                                num_classes=None, # required if class_specific == True

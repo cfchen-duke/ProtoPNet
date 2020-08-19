@@ -5,7 +5,7 @@ source /home/home2/ct214/virtual_envs/ml/bin/activate
 echo "start running"
 nvidia-smi
 
-srun -u python main.py -latent=2048 -experiment_run="5class_DDSM_2048_0513_neglogit0" -base="resnet201"  \
+srun -u python main.py -latent=1024 -experiment_run="5class_DDSM_1024_0818_neglogit0" -base="resnet152"  \
                         -train_dir="/usr/project/xtmp/mammo/binary_Feb/DDSM_five_class_augmented/" \
                         -push_dir="/usr/project/xtmp/mammo/binary_Feb/DDSM_five_class/" \
                         -test_dir="/usr/project/xtmp/mammo/binary_Feb/DDSM_five_class_test/"
