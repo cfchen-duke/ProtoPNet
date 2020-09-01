@@ -26,6 +26,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-gpuid', nargs=1, type=str, default='0') # python3 main.py -gpuid=0,1,2,3
 parser.add_argument('-experiment_run', nargs=1, type=str, default='0')
 parser.add_argument("-latent", nargs=1, type=int, default=32)
+parser.add_argument("-last_layer_weight", nargs=1, type=int, default=None)
 parser.add_argument("-model", type=str)
 parser.add_argument("-base", type=str)
 parser.add_argument("-train_dir", type=str)
@@ -37,7 +38,7 @@ latent_shape = args.latent[0]
 experiment_run = args.experiment_run[0]
 load_model_dir = args.model
 base_architecture = args.base
-
+last_layer_weight = args.last_layer_weight[0]
 
 # book keeping namings and code
 from settings import img_size, prototype_shape, num_classes, \
@@ -138,6 +139,7 @@ else:
                                   num_classes=num_classes,
                                   prototype_activation_function=prototype_activation_function,
                                   add_on_layers_type=add_on_layers_type,
+                                  last_layer_weight=last_layer_weight,
                                   class_specific=class_specific)
 #if prototype_activation_function == 'linear':
 #    ppnet.set_last_layer_incorrect_connection(incorrect_strength=0)

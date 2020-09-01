@@ -216,7 +216,7 @@ def dataAugNumpy(path, targetNumber, targetDir, skip=None, rot=True):
         os.mkdir(targetDir)
     for class_ in classes:
         if not os.path.exists(targetDir + class_):
-            os.mkdir(targetDir + class_)
+            os.makedirs(targetDir + class_)
 
     for class_ in classes:
         count, round = 0, 0
@@ -275,6 +275,20 @@ def window_adjustment(wwidth, wcen):
         wcen += new_wcen
         return wwidth, wcen
 
+def read_16bit_img(path):
+    # read image into np
+    reader = png.Reader(path)
+    data = reader.read()
+    pixels = data[2]
+    image = []
+    for row in pixels:
+        row = np.asarray(row, dtype=np.float32)
+        image.append(row)
+    return np.stack(image, 1)
+
+def windowing(wcen, wwidth, img):
+    image = ((img - wcen) / float(wwidth)) + 0.5
+    return np.clip(image, 0, 1)
 
 def cropROI(target, csvpath, augByWindow=False, numAugByWin=5,
             datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/"):
@@ -312,14 +326,7 @@ def cropROI(target, csvpath, augByWindow=False, numAugByWin=5,
                 os.makedirs(target + margin)
             did.add(name)
             # read image into np
-            reader = png.Reader(path)
-            data = reader.read()
-            pixels = data[2]
-            image = []
-            for row in pixels:
-                row = np.asarray(row, dtype=np.uint16)
-                image.append(row)
-            image = np.stack(image, 1)
+            image = read_16bit_img(path)
 
             # ds = dcm.read_file(path)
             # image = ds.pixel_array
@@ -373,9 +380,7 @@ def cropROI(target, csvpath, augByWindow=False, numAugByWin=5,
                 wwidth = np.asarray(ast.literal_eval(win_width[i])).max()
                 wcen = np.median(np.asarray(ast.literal_eval(win_cen[i])))
 
-                image = ((image - wcen) / wwidth) + 0.5
-                image = np.clip(image, 0, 1)
-
+                image = windowing(wcen, wwidth, image)
                 # read the location
                 location = locations[i]
                 j, curr, temp = 0, "", []
@@ -552,7 +557,6 @@ def move_to_binary(pos, before, target):
                 print("successfully saved ", file_name, " . Have saved ", count, " total for neg: " + pos)
 
 
-
 def move_DOI_to_training():
     df = pd.read_csv("/usr/project/xtmp/mammo/binary_Feb/CBIS-DDSM/mass.csv")
     margins = df["mass margins"]
@@ -641,7 +645,6 @@ def Fides_visualization(size):
     print("Saved!")
 
 
-
 def Fidex_visualization_csv(dir):
     with open(dir, "rb") as filehandle:
         paths = pickle.load(filehandle)
@@ -686,7 +689,64 @@ def remove_duplicates(dir):
     print(count, remove)
 
 
+def Lo1136iHelper():
+    train_num = {'Spiculated': 91, 'Indistinct': 158, 'Microlobulated': 30, 'Obscured': 421, 'Circumscribed': 125}
+    test_num = {'Spiculated': 19, 'Indistinct': 34, 'Microlobulated': 6, 'Obscured': 85, 'Circumscribed': 25}
+    val_num = {'Spiculated': 15, 'Indistinct': 28, 'Microlobulated': 5, 'Obscured': 73, 'Circumscribed': 21}
+    image_dir = '/usr/project/xtmp/mammo/rawdata/Aug2020/mammo_data/'
+    csv_dir = '/usr/project/xtmp/mammo/rawdata/Aug2020/mammo_labels.csv'
+    csv = pd.read_csv(csv_dir)
+    image_names = [full_path.split('/')[-1] for full_path in csv['full path']]
+    window_levels = csv['window level']
+    margins = csv['lesion margin']
+    for margin in margins:
+        for cat in ["train", "test_DONOTTOUCH", 'validation']:
+            save_dir = "/usr/xtmp/mammo/Lo1136i/" + cat + '/' + margin + '/'
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+    paths = []
+    bounding_boxes = csv['bounding box']
+    print('start going through dirs')
+    # load image
+    for root, dirs, files in os.walk(image_dir):
+        for file in files:
+            path = os.path.join(root, file)
+            paths.append(path)
+    paths.sort()
+    for path in paths:
+        file = path.split("/")[-1]
+        index = image_names.index(file)
+        if index < 0:
+            print('not found image with name ', file)
+            continue
+        image = read_16bit_img(path)
+        # window level
+        win_cen, win_width = ast.literal_eval(window_levels[index])
+        print(win_cen, win_width, file)
+        image = windowing(win_cen, win_width, image)
+        # crop
+        x1, y1, x2, y2 = ast.literal_eval(bounding_boxes[index])
+        x1, y1, x2, y2 = max(0, min(x1, x2) - 100), max(0, min(y1, y2) - 100), \
+                         min(image.shape[0], max(x1, x2) + 100), min(image.shape[1], max(y1, y2) + 100)
+        roi = image[x1:x2, y1:y2]
+
+        # save image
+        margin = margins[index]
+        if train_num[margin] > 0:
+            np.save('/usr/xtmp/mammo/Lo1136i/train/' + margin + "/" + file[:-4], roi)
+            train_num[margin] -= 1
+        elif val_num[margin] > 0:
+            np.save('/usr/xtmp/mammo/Lo1136i/validation/' + margin + "/" + file[:-4], roi)
+            val_num[margin] -= 1
+        elif test_num[margin]>0:
+            np.save('/usr/xtmp/mammo/Lo1136i/test_DONOTTOUCH/' + margin + "/" + file[:-4], roi)
+            test_num[margin] -= 1
+        print('saved!')
+
+
+
 if __name__ == "__main__":
+    # Lo1136iHelper()
     # cropROI("/usr/project/xtmp/mammo/binary_Feb/five_classes_roi/train_context_roi/", augByWindow=False,
     #         datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/",
     #         csvpath="/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
@@ -721,19 +781,19 @@ if __name__ == "__main__":
     # dirs = os.listdir("/usr/xtmp/mammo/binary_Feb/binary_context_roi/")
     # # print(dirs)
     # # remove_duplicates("/usr/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/")
-    dataAugNumpy(path="/usr/project/xtmp/mammo/binary_Feb/DDSM_five_class/",
-                 targetNumber=3000,
-                 targetDir="/usr/project/xtmp/mammo/binary_Feb/DDSM_five_class_augmented/",
-                 rot=True,
-                 skip=None)
+    # dataAugNumpy(path="/usr/project/xtmp/mammo/binary_Feb/DDSM_five_class/",
+    #              targetNumber=3000,
+    #              targetDir="/usr/project/xtmp/mammo/binary_Feb/DDSM_five_class_augmented/",
+    #              rot=True,
+    #              skip=None)
 
     # print("start data augmenting")
-#     # for pos in ["spiculated","circumscribed", "indistinct", "microlobulated", "obscured"]:
-#     #     dataAugNumpy(
-#     #         path="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + pos + "_noneg/",
-#     #         targetNumber=2000,
-#     #         targetDir="/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_train_" + pos + "_noneg_augmented/",
-#     #         rot=False)
-#     Fides_visualization(10)
-#     Fidex_visualization_csv("fides_name_list_test.data")
-#     move_DOI_to_training()
+    for pos in ["Spiculated","Circumscribed", "Indistinct", "Microlobulated", "Obscured"]:
+        dataAugNumpy(
+            path="/usr/xtmp/mammo/Lo1136i/train/",
+            targetNumber=5000,
+            targetDir="/usr/xtmp/mammo/Lo1136i/train_augmented_5000/",
+            rot=True)
+    # Fides_visualization(10)
+    # Fidex_visualization_csv("fides_name_list_test.data")
+    # move_DOI_to_training()

@@ -31,7 +31,7 @@ base_architecture_to_features = {'resnet18': resnet18_features,
 class PPNet(nn.Module):
 
     def __init__(self, features, img_size, prototype_shape,
-                 proto_layer_rf_info, num_classes, init_weights=True,
+                 proto_layer_rf_info, num_classes, init_weights=True, last_layer_connection_weight=None,
                  prototype_activation_function='log',
                  add_on_layers_type='bottleneck',
                  class_specific=False):
@@ -43,6 +43,7 @@ class PPNet(nn.Module):
         self.num_classes = num_classes
         self.class_specific=class_specific
         self.epsilon = 1e-4
+        self.last_layer_connection_weight = last_layer_connection_weight
         
         # prototype_activation_function could be 'log', 'linear',
         # or a generic function that converts distance to similarity score
@@ -287,14 +288,16 @@ class PPNet(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
-
-        self.set_last_layer_incorrect_connection(incorrect_strength=-1)
+        if self.last_layer_connection_weight:
+            self.set_last_layer_incorrect_connection(incorrect_strength=self.last_layer_connection_weight)
+        else:
+            self.set_last_layer_incorrect_connection(incorrect_strength=-2)
 
 
 
 def construct_PPNet(base_architecture, pretrained=True, img_size=224,
                     prototype_shape=(2000, 512, 1, 1), num_classes=200,
-                    prototype_activation_function='log',
+                    prototype_activation_function='log', last_layer_weight=None,
                     add_on_layers_type='bottleneck',
                     class_specific=False):
     features = base_architecture_to_features[base_architecture](pretrained=pretrained)
@@ -311,6 +314,7 @@ def construct_PPNet(base_architecture, pretrained=True, img_size=224,
                  num_classes=num_classes,
                  init_weights=True,
                  prototype_activation_function=prototype_activation_function,
+                 last_layer_connection_weight=last_layer_weight,
                  add_on_layers_type=add_on_layers_type,
                  class_specific=class_specific)
 

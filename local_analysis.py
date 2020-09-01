@@ -34,7 +34,7 @@ parser.add_argument('-test_image', nargs=1, type=str, default='0')
 args = parser.parse_args()
 
 
-test_image_dir = '/usr/project/xtmp/mammo/binary_Feb/binary_context_roi/binary_test_spiculated/spiculated/'
+test_image_dir = '/usr/project/xtmp/mammo/Lo1136i/validation/Spiculated/'
 test_image_name = args.test_image[0] # 'DP_AAPR_R_MLO_3#0.npy'
 test_image_label = 4
 
@@ -43,8 +43,8 @@ test_image_path = os.path.join(test_image_dir, test_image_name)
 # load the model
 check_test_accu = False
 
-load_model_dir = '/usr/project/xtmp/ct214/saved_models/resnet152/5class_DDSM_1024_0506_pushonLo/'
-load_model_name = '50_7push0.6512.pth'
+load_model_dir = '/usr/project/xtmp/ct214/saved_models/resnet152/5class_Lo1136_1024_0828_neglogit-0.5/'
+load_model_name = '100_5push0.7617.pth'
 
 #if load_model_dir[-1] == '/':
 #    model_base_architecture = load_model_dir.split('/')[-3]

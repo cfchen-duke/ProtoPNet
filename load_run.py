@@ -16,41 +16,17 @@ from preprocess import mean, std, preprocess_input_function, undo_preprocess_inp
 import argparse
 
 
-def main(test_dir, model_dir, model_name):
+def main(test_dir, model_path):
     # load the model
     check_test_accu = True
 
-    load_model_dir = model_dir
-    load_model_name = model_name
 
-    #if load_model_dir[-1] == '/':
-    #    model_base_architecture = load_model_dir.split('/')[-3]
-    #    experiment_run = load_model_dir.split('/')[-2]
-    #else:
-    #    model_base_architecture = load_model_dir.split('/')[-2]
-    #    experiment_run = load_model_dir.split('/')[-1]
-
-    model_base_architecture = load_model_dir.split('/')[-3]
-    experiment_run = load_model_dir.split('/')[-2]
-
-    load_model_path = os.path.join(load_model_dir, load_model_name)
-
-    print('load model from ' + load_model_path)
-    print('model base architecture: ' + model_base_architecture)
-    print('experiment run: ' + experiment_run)
-
-    ppnet = torch.load(load_model_path,map_location=torch.device('cpu'))
+    ppnet = torch.load(model_path)
     ppnet = ppnet.cuda()
     ppnet_multi = torch.nn.DataParallel(ppnet)
 
-    img_size = ppnet_multi.module.img_size
-    prototype_shape = ppnet.prototype_shape
-    max_dist = prototype_shape[1] * prototype_shape[2] * prototype_shape[3]
 
-    class_specific = False
-
-    normalize = transforms.Normalize(mean=mean,
-                                     std=std)
+    class_specific = True
 
     # load the test data and check test accuracy
     if check_test_accu:
@@ -190,13 +166,44 @@ def draw_roc_curve(data_path, model_path, image_name, target_class, num_classes)
     plt.legend(loc="lower right")
     plt.savefig(image_name)
 
+
+def confusion_matrix(model_path, data_path, num_classes=5):
+    # predicted * true
+    model = torch.load(model_path)
+    test_dataset = DatasetFolder(
+        data_path,
+        augmentation=False,
+        loader=np.load,
+        extensions=("npy",),
+        transform=transforms.Compose([
+            torch.from_numpy,
+        ])
+    )
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset, batch_size=100, shuffle=True,
+        num_workers=4, pin_memory=False)
+
+    confusion_matrix = [[0 for _ in range(num_classes)] for _ in range(num_classes)]
+    for i, (image, label, patient_id) in enumerate(test_loader):
+        input = image.cuda()\
+
+        # torch.enable_grad() has no effect outside of no_grad()
+        grad_req = torch.no_grad()
+        with grad_req:
+            output, min_distances = model(input)
+            res = torch.argmax(output, dim=1)
+            for j in range(len(res)):
+                confusion_matrix[res[j]][label[j]] += 1 # cm[predicted][true] += 1
+
+    print("confusion matrix is", confusion_matrix)
+
 if __name__=="__main__":
-    # main(test_dir="/usr/project/xtmp/mammo/binary_Feb/DDSM_five_class_test/",
-    #      model_dir="/usr/project/xtmp/ct214/saved_models/resnet152/5class_DDSM_1024_0506_pushonLo/",
-    #      model_name="50_7push0.6512.pth")
-    draw_roc_curve("/usr/project/xtmp/mammo/DDSM-context-test/",
-                   "/usr/project/xtmp/ct214/saved_models/resnet152/DDSM_context_1024_0618/90_6push0.6458.pth",
-                   image_name="withContextCompare", target_class=4, num_classes=5)
+    main(test_dir='/usr/xtmp/mammo/Lo1136i/test_DONOTTOUCH/',
+         model_path='/usr/project/xtmp/ct214/saved_models/resnet152/5class_Lo1136_1024_0826_neglogit-0/60_7push0.7425.pth')
+    # draw_roc_curve("/usr/project/xtmp/mammo/DDSM-context-test/",
+    #                "/usr/project/xtmp/ct214/saved_models/resnet152/DDSM_context_1024_0618/90_6push0.6458.pth",
+    #                image_name="withContextCompare", target_class=4, num_classes=5)
     # draw_roc_curve("/usr/project/xtmp/mammo/DDSM-context-test/",
     #                "/usr/project/xtmp/ct214/saved_models/resnet152/5class_DDSM_1024_0517_neglogit-0.5sep-0.08/50_9push0.6072.pth",
     #                image_name="noContext", target_class=4, num_classes=5)
+    confusion_matrix('/usr/project/xtmp/ct214/saved_models/resnet152/5class_Lo1136_1024_0826_neglogit-0/60_7push0.7425.pth', '/usr/xtmp/mammo/Lo1136i/test_DONOTTOUCH/')
