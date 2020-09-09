@@ -132,6 +132,8 @@ from settings import class_specific
 # construct the model
 if load_model_dir:
     ppnet = torch.load(load_model_dir)
+    print(ppnet)
+    raise
 else:
     ppnet = model.construct_PPNet(base_architecture=base_architecture,
                                   pretrained=True, img_size=img_size,

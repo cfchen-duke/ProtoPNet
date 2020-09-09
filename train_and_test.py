@@ -48,12 +48,14 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
                 prototypes_of_correct_class = torch.t(model.module.prototype_class_identity[:,label]).cuda()
                 inverted_distances, _ = torch.max((max_dist - min_distances) * prototypes_of_correct_class, dim=1)
                 cluster_cost = torch.mean(max_dist - inverted_distances)
+                # print("before change")
 
                 # calculate separation cost
                 prototypes_of_wrong_class = 1 - prototypes_of_correct_class
                 inverted_distances_to_nontarget_prototypes, _ = \
                     torch.max((max_dist - min_distances) * prototypes_of_wrong_class, dim=1)
                 separation_cost = torch.mean(max_dist - inverted_distances_to_nontarget_prototypes)
+                # print("after change")
 
                 # calculate avg cluster cost
                 avg_separation_cost = \

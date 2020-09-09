@@ -25,7 +25,6 @@ def main(test_dir, model_path):
     ppnet = ppnet.cuda()
     ppnet_multi = torch.nn.DataParallel(ppnet)
 
-
     class_specific = True
 
     # load the test data and check test accuracy
@@ -198,12 +197,12 @@ def confusion_matrix(model_path, data_path, num_classes=5):
     print("confusion matrix is", confusion_matrix)
 
 if __name__=="__main__":
-    main(test_dir='/usr/xtmp/mammo/Lo1136i/test_DONOTTOUCH/',
-         model_path='/usr/project/xtmp/ct214/saved_models/resnet152/5class_Lo1136_1024_0826_neglogit-0/60_7push0.7425.pth')
+    main(test_dir='/usr/project/xtmp/mammo/Lo1136i/validation/',
+         model_path='/usr/project/xtmp/ct214/saved_models/resnet152/5class_Lo1136_1024_0831_neglogit-1/90_2push0.7511.pth')
     # draw_roc_curve("/usr/project/xtmp/mammo/DDSM-context-test/",
     #                "/usr/project/xtmp/ct214/saved_models/resnet152/DDSM_context_1024_0618/90_6push0.6458.pth",
     #                image_name="withContextCompare", target_class=4, num_classes=5)
     # draw_roc_curve("/usr/project/xtmp/mammo/DDSM-context-test/",
     #                "/usr/project/xtmp/ct214/saved_models/resnet152/5class_DDSM_1024_0517_neglogit-0.5sep-0.08/50_9push0.6072.pth",
     #                image_name="noContext", target_class=4, num_classes=5)
-    confusion_matrix('/usr/project/xtmp/ct214/saved_models/resnet152/5class_Lo1136_1024_0826_neglogit-0/60_7push0.7425.pth', '/usr/xtmp/mammo/Lo1136i/test_DONOTTOUCH/')
+    # confusion_matrix('/usr/project/xtmp/ct214/saved_models/resnet152/5class_Lo1136_1024_0826_neglogit-0/60_7push0.7425.pth', '/usr/xtmp/mammo/Lo1136i/test_DONOTTOUCH/')
