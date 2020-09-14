@@ -3,8 +3,8 @@ import numpy as np
 
 base_architecture = 'resnet152'
 img_size = 224
-prototype_shape = (20, 1024, 1, 1)
-num_classes = 5
+prototype_shape = (15, 1024, 1, 1)
+num_classes = 3
 # def prototype_activation_function(distance):
 #     return -torch.log(distance + 1e-4)
 #
