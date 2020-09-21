@@ -5,8 +5,8 @@ source /home/home2/ct214/virtual_envs/ml/bin/activate
 echo "start running"
 nvidia-smi
 
-srun -u python main.py -latent=64 -experiment_run="3class_Lo1136_64_0914_neglogit-1" \
-                        -base="vgg16"  \
+srun -u python main.py -latent=512 -experiment_run="3class_Lo1136_512_0918_neglogit-1" \
+                        -base="vgg16" \
                         -last_layer_weight=-1\
                         -train_dir="/usr/xtmp/mammo/Lo1136i/train_augmented_5000_3_class/" \
                         -push_dir="/usr/xtmp/mammo/Lo1136i/train_3_class/" \
