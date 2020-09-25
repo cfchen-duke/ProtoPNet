@@ -160,20 +160,16 @@ class PPNet(nn.Module):
         '''
         apply self.prototype_vectors as l2-convolution filters on input x
         '''
-        x2 = x ** 2
-        x2_patch_sum = F.conv2d(input=x2, weight=self.ones)
-
-        p2 = self.prototype_vectors ** 2
-        p2 = torch.sum(p2, dim=(1, 2, 3))
-        # p2 is a vector of shape (num_prototypes,)
-        # then we reshape it to (num_prototypes, 1, 1)
-        p2_reshape = p2.view(-1, 1, 1)
-
-        xp = F.conv2d(input=x, weight=self.prototype_vectors)
-        intermediate_result = - 2 * xp + p2_reshape  # use broadcast
-        # x2_patch_sum and intermediate_result are of the same shape
-        distances = F.relu(x2_patch_sum + intermediate_result)
-
+        print(x.shape)
+        expanded_x = nn.Unfold(kernel_size=(self.prototype_shape[2], self.prototype_shape[3]))(x)
+        expanded_x = expanded_x.unsqueeze(0)
+        print(expanded_x.shape)
+        print(self.prototype_vectors.shape)
+        expanded_proto = nn.Unfold(kernel_size=(self.prototype_shape[2], self.prototype_shape[3]))(self.prototype_vectors).unsqueeze(0)
+        print(expanded_proto.shape)
+        expanded_distances = torch.cdist(expanded_x, expanded_proto)
+        distances = nn.Fold(output_size=(x.shape[2], x.shape[3]), kernel_size=(self.prototype_shape[2], self.prototype_shape[3]))(expanded_distances)
+        print(distances.shape) 
         return distances
 
     def prototype_distances(self, x):
