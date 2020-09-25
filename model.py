@@ -160,16 +160,18 @@ class PPNet(nn.Module):
         '''
         apply self.prototype_vectors as l2-convolution filters on input x
         '''
-        print(x.shape)
+        # x is the conv output, shape=[Batch * channel * conv output shape]
         expanded_x = nn.Unfold(kernel_size=(self.prototype_shape[2], self.prototype_shape[3]))(x)
         expanded_x = expanded_x.unsqueeze(0)
-        print(expanded_x.shape)
-        print(self.prototype_vectors.shape)
+        # expanded shape = [1, batch, channel*proto_shape[2]*proto_shape[3], number of such blocks]
         expanded_proto = nn.Unfold(kernel_size=(self.prototype_shape[2], self.prototype_shape[3]))(self.prototype_vectors).unsqueeze(0)
-        print(expanded_proto.shape)
-        expanded_distances = torch.cdist(expanded_x, expanded_proto)
+        # expanded proto shape = [1, proto num, channel*proto_shape[2]*proto_shape[3], 1]
+        expanded_distances = []
+        for x_patch in torch.chunk(expanded_x, dim=3, chunks=expanded_x.shape[-1]):
+            expanded_distances.append(torch.cdist(x_patch.view(1, x_patch.shape[1], -1), expanded_proto.view(1, expanded_proto.shape[1], -1)))
+        expanded_distances = torch.cat(expanded_distances).permute(1,2,0)
         distances = nn.Fold(output_size=(x.shape[2], x.shape[3]), kernel_size=(self.prototype_shape[2], self.prototype_shape[3]))(expanded_distances)
-        print(distances.shape) 
+        # distance shape = [batch, proto num, conv output shape]
         return distances
 
     def prototype_distances(self, x):
