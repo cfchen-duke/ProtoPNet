@@ -168,7 +168,7 @@ class PPNet(nn.Module):
         # expanded proto shape = [1, proto num, channel*proto_shape[2]*proto_shape[3], 1]
         expanded_distances = []
         for x_patch in torch.chunk(expanded_x, dim=3, chunks=expanded_x.shape[-1]):
-            expanded_distances.append(torch.cdist(x_patch.view(1, x_patch.shape[1], -1), expanded_proto.view(1, expanded_proto.shape[1], -1)))
+            expanded_distances.append(torch.cdist(x_patch.view(1, x_patch.shape[1], -1).contiguous(), expanded_proto.view(1, expanded_proto.shape[1], -1).contiguous()))
         expanded_distances = torch.cat(expanded_distances).permute(1,2,0)
         distances = nn.Fold(output_size=(x.shape[2], x.shape[3]), kernel_size=(self.prototype_shape[2], self.prototype_shape[3]))(expanded_distances)
         # distance shape = [batch, proto num, conv output shape]
