@@ -27,10 +27,12 @@ def imsave_with_bbox(fname, img_rgb, bbox_height_start, bbox_height_end,
 class ImagePatch:
 
     def __init__(self, patch, label, distance,
-                 original_img=None, act_pattern=None, patch_indices=None):
+                 original_img=None, act_pattern=None, patch_indices=None, conv_output=None):
         self.patch = patch
         self.label = label
+        self.conv_output = conv_output
         self.negative_distance = -distance
+        print(label)
 
         self.original_img = original_img
         self.act_pattern = act_pattern
@@ -100,7 +102,6 @@ def find_k_nearest_patches_to_prototypes(dataloader, # pytorch dataloader (must 
         for img_idx, distance_map in enumerate(proto_dist_):
             for j in range(n_prototypes):
                 # find the closest patches in this batch to prototype j
-
                 closest_patch_distance_to_prototype_j = np.amin(distance_map[j])
 
                 if full_save:
@@ -135,6 +136,7 @@ def find_k_nearest_patches_to_prototypes(dataloader, # pytorch dataloader (must 
                     # construct the closest patch object
                     closest_patch = ImagePatch(patch=closest_patch,
                                                label=search_y[img_idx],
+                                               conv_output=protoL_input_torch[img_idx],
                                                distance=closest_patch_distance_to_prototype_j,
                                                original_img=original_img,
                                                act_pattern=act_pattern,
@@ -242,12 +244,14 @@ def find_k_nearest_patches_to_prototypes(dataloader, # pytorch dataloader (must 
             np.save(os.path.join(dir_for_saving_images, 'class_id.npy'),
                     labels)
 
-
     labels_all_prototype = np.array([[patch.label for patch in heaps[j]] for j in range(n_prototypes)])
+    neg_dists_all_prototype = np.array([[patch.negative_distance for patch in heaps[j]] for j in range(n_prototypes)])
 
     if full_save:
         np.save(os.path.join(root_dir_for_saving_images, 'full_class_id.npy'),
                 labels_all_prototype)
+        np.save(os.path.join(root_dir_for_saving_images, 'full_class_neg_distance.npy'),
+                neg_dists_all_prototype)
 
     end = time.time()
     log('\tfind nearest patches time: \t{0}'.format(end - start))

@@ -6,4 +6,6 @@ echo "start running"
 nvidia-smi
 
 srun -u python3 global_analysis.py -modeldir='/usr/project/xtmp/ct214/saved_models/vgg16/3class_Lo1136_512_0914_neglogit-1/' \
-                                    -model='100_5push0.9161.pth'
+                                   -model='100_5push0.9161.pth' \
+                                   -push_dir='/usr/project/xtmp/mammo/Lo1136i/train_3_class/' \
+                                   -test_dir='/usr/project/xtmp/mammo/Lo1136i/validation_3_class/'

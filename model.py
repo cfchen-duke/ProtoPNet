@@ -171,7 +171,7 @@ class PPNet(nn.Module):
         expanded_distances = torch.cdist(expanded_x, expanded_proto.contiguous().view(1, expanded_proto.shape[1], -1))
         # [1, Batch * number of blocks in x, num proto]
         expanded_distances = torch.reshape(expanded_distances, shape=(batch, -1, self.prototype_shape[0])).permute(0,2,1)
-        distances = nn.Fold(output_size=(x.shape[2], x.shape[3]), kernel_size=(self.prototype_shape[2], self.prototype_shape[3]))(expanded_distances)
+        distances = nn.Fold(output_size=(x.shape[2] - self.prototype_shape[2] + 1, x.shape[3]- self.prototype_shape[3] + 1), kernel_size=(self.prototype_shape[2], self.prototype_shape[3]))(expanded_distances)
         # distance shape = [batch, proto num, conv output shape]
         return distances
 
