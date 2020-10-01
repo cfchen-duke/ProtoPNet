@@ -6,6 +6,7 @@ echo "start running"
 nvidia-smi
 
 srun -u python main.py -latent=512 -experiment_run="3class_Lo1136_512_0929_neglogit-1_l2" \
+srun -u python main.py -latent=512 -experiment_run="3class_Lo1136_512_0928_neglogit-1" \
                         -base="vgg16" \
                         -last_layer_weight=-1\
                         -train_dir="/usr/xtmp/mammo/Lo1136i/train_augmented_5000_3_class/" \
