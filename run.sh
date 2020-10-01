@@ -5,6 +5,7 @@ source /home/home2/ct214/virtual_envs/ml/bin/activate
 echo "start running"
 nvidia-smi
 
+srun -u python main.py -latent=512 -experiment_run="3class_Lo1136_512_0929_neglogit-1_l2" \
 srun -u python main.py -latent=512 -experiment_run="3class_Lo1136_512_0928_neglogit-1" \
                         -base="vgg16" \
                         -last_layer_weight=-1\

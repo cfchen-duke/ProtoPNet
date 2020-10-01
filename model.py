@@ -160,20 +160,19 @@ class PPNet(nn.Module):
         '''
         apply self.prototype_vectors as l2-convolution filters on input x
         '''
-        x2 = x ** 2
-        x2_patch_sum = F.conv2d(input=x2, weight=self.ones)
-
-        p2 = self.prototype_vectors ** 2
-        p2 = torch.sum(p2, dim=(1, 2, 3))
-        # p2 is a vector of shape (num_prototypes,)
-        # then we reshape it to (num_prototypes, 1, 1)
-        p2_reshape = p2.view(-1, 1, 1)
-
-        xp = F.conv2d(input=x, weight=self.prototype_vectors)
-        intermediate_result = - 2 * xp + p2_reshape  # use broadcast
-        # x2_patch_sum and intermediate_result are of the same shape
-        distances = F.relu(x2_patch_sum + intermediate_result)
-
+        batch = x.shape[0]
+        # x is the conv output, shape=[Batch * channel * conv output shape]
+        expanded_x = nn.Unfold(kernel_size=(self.prototype_shape[2], self.prototype_shape[3]))(x)
+        expanded_x = expanded_x.unsqueeze(0).permute(0,1,3,2)
+        # expanded shape = [1, batch, number of such blocks, channel*proto_shape[2]*proto_shape[3]]
+        expanded_x = expanded_x.contiguous().view(1, -1, self.prototype_shape[1] *self.prototype_shape[2] * self.prototype_shape[3])
+        expanded_proto = nn.Unfold(kernel_size=(self.prototype_shape[2], self.prototype_shape[3]))(self.prototype_vectors).unsqueeze(0)
+        # expanded proto shape = [1, proto num, channel*proto_shape[2]*proto_shape[3], 1]
+        expanded_distances = torch.cdist(expanded_x, expanded_proto.contiguous().view(1, expanded_proto.shape[1], -1))
+        # [1, Batch * number of blocks in x, num proto]
+        expanded_distances = torch.reshape(expanded_distances, shape=(batch, -1, self.prototype_shape[0])).permute(0,2,1)
+        distances = nn.Fold(output_size=(x.shape[2] - self.prototype_shape[2] + 1, x.shape[3]- self.prototype_shape[3] + 1), kernel_size=(self.prototype_shape[2], self.prototype_shape[3]))(expanded_distances)
+        # distance shape = [batch, proto num, conv output shape]
         return distances
 
     def prototype_distances(self, x):

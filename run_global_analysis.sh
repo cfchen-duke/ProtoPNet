@@ -5,4 +5,7 @@ source /home/home2/ct214/virtual_envs/ml/bin/activate
 echo "start running"
 nvidia-smi
 
-srun -u python3 global_analysis.py -modeldir='/usr/project/xtmp/ct214/saved_models/resnet152/5class_DDSM_1024_0506/' -model='60_2push0.7705.pth'
+srun -u python3 global_analysis.py -modeldir='/usr/project/xtmp/ct214/saved_models/vgg16/3class_Lo1136_512_0914_neglogit-1/' \
+                                   -model='100_5push0.9161.pth' \
+                                   -push_dir='/usr/project/xtmp/mammo/Lo1136i/train_3_class/' \
+                                   -test_dir='/usr/project/xtmp/mammo/Lo1136i/validation_3_class/'

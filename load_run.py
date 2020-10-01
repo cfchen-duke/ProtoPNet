@@ -197,8 +197,8 @@ def confusion_matrix(model_path, data_path, num_classes=5):
     print("confusion matrix is", confusion_matrix)
 
 if __name__=="__main__":
-    main(test_dir='/usr/project/xtmp/mammo/Lo1136i/validation/',
-         model_path='/usr/project/xtmp/ct214/saved_models/resnet152/5class_Lo1136_1024_0831_neglogit-1/90_2push0.7511.pth')
+    main(test_dir='/usr/project/xtmp/mammo/Lo1136i/validation_3_class/',
+         model_path='/usr/xtmp/ct214/saved_models/resnet34/3class_Lo1136_512_0918_neglogit-1/560_7push0.8411.pth')
     # draw_roc_curve("/usr/project/xtmp/mammo/DDSM-context-test/",
     #                "/usr/project/xtmp/ct214/saved_models/resnet152/DDSM_context_1024_0618/90_6push0.6458.pth",
     #                image_name="withContextCompare", target_class=4, num_classes=5)

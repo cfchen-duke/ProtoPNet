@@ -25,6 +25,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-gpuid', nargs=1, type=str, default='0')
 parser.add_argument('-modeldir', nargs=1, type=str)
 parser.add_argument('-model', nargs=1, type=str)
+parser.add_argument('-test_dir', nargs=1, type=str)
+parser.add_argument('-push_dir', nargs=1, type=str)
 #parser.add_argument('-dataset', nargs=1, type=str, default='cub200')
 args = parser.parse_args()
 
@@ -46,8 +48,8 @@ img_size = ppnet_multi.module.img_size
 
 # load the data
 # must use unaugmented (original) dataset
-from settings import train_push_dir, test_dir
-train_dir = train_push_dir
+train_dir = args.push_dir[0]
+test_dir = args.test_dir[0]
 
 batch_size = 100
 
@@ -119,7 +121,7 @@ for j in range(ppnet.num_prototypes):
                                           bbox_width_end=prototype_info[j][4],
                                           color=(0, 255, 255))
 
-k = 5
+k = 3
 
 find_nearest.find_k_nearest_patches_to_prototypes(
         dataloader=train_loader, # pytorch dataloader (must be unnormalized in [0,1])
