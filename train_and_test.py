@@ -11,7 +11,7 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
     dataloader:
     optimizer: if None, will be test evaluation
     '''
-    is_train = optimizer is not None
+    is_train = optimizer is not None 
     start = time.time()
     n_examples = 0
     n_correct = 0
