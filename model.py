@@ -43,6 +43,7 @@ class PPNet(nn.Module):
         self.num_classes = num_classes
         self.class_specific=class_specific
         self.epsilon = 1e-4
+        self.fine_annotation = torch.zeros(shape=(1, 224, 224))
         self.last_layer_connection_weight = last_layer_connection_weight
         
         # prototype_activation_function could be 'log', 'linear',
@@ -192,15 +193,21 @@ class PPNet(nn.Module):
             return self.prototype_activation_function(distances)
 
     def forward(self, x):
+        # x is of dimension (batch, 3, 224, 224, 2)
+        self.fine_annotation = x[:, 0, :, :, 1]
+        x = x[:, :, :, :, 0].view(:, :, :, -1)
         distances = self.prototype_distances(x)
         '''
         we cannot refactor the lines below for similarity scores
         because we need to return min_distances
         '''
+        upsampled_distances = torch.nn.Upsample(size=(x.shape[0], self.prototype_shape[0], x.shape[2], x.shape[3]), mode="bilinear")(distances)
+        # Look into this
+        # fine_annotation_loss = torch.norm(upsampled_distances * self.fine_annotation)
         # global min pooling
-        min_distances = -F.max_pool2d(-distances,
-                                      kernel_size=(distances.size()[2],
-                                                   distances.size()[3]))
+        min_distances = -F.max_pool2d(-upsampled_distances,
+                                      kernel_size=(upsampled_distances.size()[2],
+                                                   upsampled_distances.size()[3]))
         min_distances = min_distances.view(-1, self.num_prototypes)
         prototype_activations = self.distance_2_similarity(min_distances)
         logits = self.last_layer(prototype_activations)
