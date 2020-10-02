@@ -195,7 +195,7 @@ class PPNet(nn.Module):
     def forward(self, x):
         # x is of dimension (batch, 3, 224, 224, 2)
         #self.fine_annotation = x[x.shape[0], 0, x.shape[2], x.shape[3], 1].reshape(x.shape[0], 0, x.shape[2], x.shape[3])
-        self.fine_annotation = torch.zeros(size=(x.shape[0], 1, x.shape[2], x.shape[3])) #temporary line
+        self.fine_annotation = torch.zeros(size=(x.shape[0], x.shape[1], x.shape[2], x.shape[3])).cuda() #temporary line
         #x = x[:, :, :, :, 0].view(x.shape[0], x.shape[1], x.shape[2], x.shape[3], -1)
         distances = self.prototype_distances(x)
         '''
@@ -208,7 +208,7 @@ class PPNet(nn.Module):
         print("up_dist", upsampled_distances.shape)
         print("fa_shape", self.fine_annotation.shape)
         fine_annotation_loss = torch.norm(upsampled_distances * self.fine_annotation)
-        print("fa_loss", self.fine_annotation_loss.shape)
+        print("fa_loss", fine_annotation_loss.shape)
         # global min pooling
         min_distances = -F.max_pool2d(-upsampled_distances,
                                       kernel_size=(upsampled_distances.size()[2],
