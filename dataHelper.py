@@ -37,39 +37,56 @@ def make_dataset(dir, class_to_idx, extensions=None, is_valid_file=None):
     return images
 
 
-def random_flip(input, axis):
+def random_flip(input, axis, with_fa=False):
     ran = random.random()
     if ran > 0.5:
+        if with_fa:
+            axis += 1
         return np.flip(input, axis=axis)
     else:
         return input
 
 
-def random_crop(input):
+def random_crop(input, with_fa=False):
+    
     ran = random.random()
     if ran > 0.2:
         # find a random place to be the left upper corner of the crop
-        rx = int(random.random() * input.shape[0] // 10)
-        ry = int(random.random() * input.shape[1] // 10)
-        return input[rx: rx + int(input.shape[0] * 9 // 10), ry: ry + int(input.shape[1] * 9 // 10)]
+        if with_fa:
+            rx = int(random.random() * input.shape[1] // 10)
+            ry = int(random.random() * input.shape[2] // 10)
+            return input[:, rx: rx + int(input.shape[1] * 9 // 10), ry: ry + int(input.shape[2] * 9 // 10)]
+        else:
+            rx = int(random.random() * input.shape[0] // 10)
+            ry = int(random.random() * input.shape[1] // 10)
+            return input[rx: rx + int(input.shape[0] * 9 // 10), ry: ry + int(input.shape[1] * 9 // 10)]
     else:
         return input
 
 
-def random_rotate_90(input):
+def random_rotate_90(input, with_fa=False):
     ran = random.random()
     if ran > 0.5:
+        if with_fa:
+            return np.rot90(input, axes=(1,2))
         return np.rot90(input)
     else:
         return input
 
 
-def random_shift(input, axis, range):
+def random_rotation(x, chance, with_fa=False):
     ran = random.random()
-
-
-def random_rotation(x, chance):
-    ran = random.random()
+    if with_fa:
+        img = Image.fromarray(x[0])
+        mask = Image.fromarray(x[1])
+        if ran > 1 - chance:
+            # create black edges
+            angle = np.random.randint(0, 90)
+            img = img.rotate(angle=angle, expand=1)
+            mask = mask.rotate(angle=angle, expand=1, fillcolor=1)
+            return np.stack([np.asarray(img), np.asarray(mask)])
+        else:
+            return np.stack([np.asarray(img), np.asarray(mask)])
     img = Image.fromarray(x)
     if ran > 1 - chance:
         # create black edges
@@ -210,7 +227,7 @@ def cleanup(dir):
     print(removed)
 
 
-def dataAugNumpy(path, targetNumber, targetDir, skip=None, rot=True):
+def dataAugNumpy(path, targetNumber, targetDir, skip=None, rot=True, with_fa=False):
     classes = os.listdir(path)
     if not os.path.exists(targetDir):
         os.mkdir(targetDir)
@@ -228,35 +245,47 @@ def dataAugNumpy(path, targetNumber, targetDir, skip=None, rot=True):
                         continue
                     filepath = os.path.join(root, file)
                     arr = np.load(filepath)
+                    print("loaded ", file)
+                    print(arr.shape)
                     try:
-                        arr = random_crop(arr)
+                        arr = random_crop(arr, with_fa)
+                        print(arr.shape)
                         if rot:
-                            arr = random_rotation(arr, 0.9)
-                        arr = random_flip(arr, 0)
-                        arr = random_flip(arr, 1)
-                        arr = random_rotate_90(arr)
-                        arr = random_rotate_90(arr)
-                        arr = random_rotate_90(arr)
+                            arr = random_rotation(arr, 0.9, with_fa)
+                        print(arr.shape)
+                        arr = random_flip(arr, 0, with_fa)
+                        arr = random_flip(arr, 1, with_fa)
+                        arr = random_rotate_90(arr, with_fa)
+                        arr = random_rotate_90(arr, with_fa)
+                        arr = random_rotate_90(arr, with_fa)
                         # arr = random_rotation(arr, 0.9)
+                        if with_fa:
+                            whites = arr.shape[2] * arr.shape[1] - np.count_nonzero(np.round(arr[0] - np.amax(arr[0]), 2))
+                            black = arr.shape[2] * arr.shape[1] - np.count_nonzero(np.round(arr[0], 2))
+                            if arr.shape[2] < 10 or arr.shape[1] < 10 or black >= arr.shape[2] * arr.shape[1] * 0.8 or \
+                                whites >= arr.shape[2] * arr.shape[1] * 0.8:
+                                print("illegal content")
+                                continue
 
-                        whites = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr - np.amax(arr), 2))
-                        black = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr, 2))
+                        else:
+                            whites = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr - np.amax(arr), 2))
+                            black = arr.shape[0] * arr.shape[1] - np.count_nonzero(np.round(arr, 2))
 
-                        if arr.shape[0] < 10 or arr.shape[1] < 10 or black >= arr.shape[0] * arr.shape[1] * 0.8 or \
-                                whites >= arr.shape[0] * arr.shape[1] * 0.8:
-                            print("illegal content")
-                            continue
+                            if arr.shape[0] < 10 or arr.shape[1] < 10 or black >= arr.shape[0] * arr.shape[1] * 0.8 or \
+                                    whites >= arr.shape[0] * arr.shape[1] * 0.8:
+                                print("illegal content")
+                                continue
 
                         if count % 1500 == 0:
                             if not os.path.exists("./visualizations_of_augmentation/" + class_ + "/"):
                                 os.makedirs("./visualizations_of_augmentation/" + class_ + "/")
-                            imsave("./visualizations_of_augmentation/" + class_ + "/" + str(count), arr,
-                                   cmap="gray")
+                            imsave("./visualizations_of_augmentation/" + class_ + "/" + str(count), np.transpose(np.stack([arr[0], arr[0], arr[1]]), (1,2,0)))
 
                         np.save(targetDir + class_ + "/" + file[:-4] + "aug" + str(round), arr)
                         count += 1
                         print(count)
                     except:
+                        print("something is wrong in try, details:", sys.exc_info()[0])
                         if not os.path.exists("./error_of_augmentation/" + class_ + "/"):
                             os.makedirs("./error_of_augmentation/" + class_ + "/")
                         np.save("./error_of_augmentation/" + class_ + "/" + str(count), arr)
@@ -754,7 +783,7 @@ def Lo1136iHelper():
 
 
 if __name__ == "__main__":
-    Lo1136iHelper()
+    # Lo1136iHelper()
     # cropROI("/usr/project/xtmp/mammo/binary_Feb/five_classes_roi/train_context_roi/", augByWindow=False,
     #         datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/",
     #         csvpath="/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
@@ -796,9 +825,10 @@ if __name__ == "__main__":
     #              skip=None)
 
     # print("start data augmenting")
-    # for pos in ["Spiculated","Circumscribed", "Indistinct", "Microlobulated", "Obscured"]:
-    #     dataAugNumpy(
-    #         path="/usr/xtmp/mammo/Lo1136i/train/",
-    #         targetNumber=5000,
-    #         targetDir="/usr/xtmp/mammo/Lo1136i/train_augmented_5000/",
-    #         rot=True)
+    for pos in ["Spiculated","Circumscribed", "Indistinct", "Microlobulated", "Obscured"]:
+        dataAugNumpy(
+            path="/usr/xtmp/mammo/Lo1136i_with_fa/train/",
+            targetNumber=5000,
+            targetDir="/usr/xtmp/mammo/Lo1136i_with_fa/train_augmented_5000/",
+            rot=True,
+            with_fa=True)
