@@ -24,8 +24,16 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
     # separation cost is meaningful only for class_specific
     total_separation_cost = 0
     total_avg_separation_cost = 0
+    total_fa_cost = 0
 
     for i, (image, label, patient_id) in enumerate(dataloader):
+        if image.shape[1] == 4:
+            fine_annotation = image[:, 3:4, :, :]
+            image = image[:, 0:3, :, :]  #(no view, create slice)
+        elif image.shape[1] == 3:
+            fine_annotation = torch.zeros(size=(image.shape[0], 1, image.shape[2], image.shape[3])) #means everything can be relevant
+            image = image
+        fine_annotation = fine_annotation.cuda()
         input = image.cuda()
         target = label.cuda()
 
@@ -67,6 +75,9 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
                     l1 = (model.module.last_layer.weight * l1_mask).norm(p=1)
                 else:
                     l1 = model.module.last_layer.weight.norm(p=1) 
+
+                #fine annotation loss
+                fine_annotation_cost = torch.norm(upsampled_distances * fine_annotation)
 
             else:
                 min_distance, _ = torch.min(min_distances, dim=1)
@@ -118,6 +129,7 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
             total_cross_entropy += cross_entropy.item()
             total_cluster_cost += cluster_cost.item()
             total_separation_cost += separation_cost.item()
+            total_fa_cost += fine_annotation_cost.item()
             if class_specific:
                 total_avg_separation_cost += avg_separation_cost.item()
 
@@ -127,7 +139,8 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
                 loss = (coefs['crs_ent'] * cross_entropy
                       + coefs['clst'] * cluster_cost
                       + coefs['sep'] * separation_cost
-                      + coefs['l1'] * l1)
+                      + coefs['l1'] * l1
+                      + coefs['fine'] * fine_annotation_cost)
             else:
                 loss = cross_entropy + 0.8 * cluster_cost - 0.08 * separation_cost + 1e-4 * l1
 
@@ -147,6 +160,7 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
     log('\tcross ent: \t{0}'.format(total_cross_entropy / n_batches))
     log('\tcluster: \t{0}'.format(total_cluster_cost / n_batches))
     log('\tseparation:\t{0}'.format(total_separation_cost / n_batches))
+    log('\tfine annotation:\t{0}'.format(total_fa_cost / n_batches))
     if class_specific:
         log('\tavg separation:\t{0}'.format(total_avg_separation_cost / n_batches))
 

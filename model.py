@@ -43,7 +43,6 @@ class PPNet(nn.Module):
         self.num_classes = num_classes
         self.class_specific=class_specific
         self.epsilon = 1e-4
-        self.fine_annotation = torch.zeros(size=(1, 224, 224))
         self.last_layer_connection_weight = last_layer_connection_weight
         
         # prototype_activation_function could be 'log', 'linear',
@@ -194,7 +193,7 @@ class PPNet(nn.Module):
 
     def forward(self, x):
         # x is of dimension (batch, 4, 224, 224)
-        x = x[:, 0:3, :, :] #(no view, create slice, when no fa is available this will return x)
+        x = x[:, 0:3, :, :]  #(no view, create slice, when no fa is available this will return x)
         distances = self.prototype_distances(x)
         '''
         we cannot refactor the lines below for similarity scores
@@ -202,11 +201,7 @@ class PPNet(nn.Module):
         '''
         #upsampled_distances = torch.nn.Upsample(size=(x.shape[0], self.prototype_shape[0], x.shape[2], x.shape[3]), mode="bilinear")(distances)
         upsampled_distances = torch.nn.Upsample(size=(x.shape[2], x.shape[3]), mode="bilinear")(distances)
-        # Look into this
-        print("up_dist", upsampled_distances.shape)
-        print("fa_shape", self.fine_annotation.shape)
-        fine_annotation_loss = torch.norm(upsampled_distances * self.fine_annotation)
-        print("fa_loss", fine_annotation_loss.shape, "=", fine_annotation_loss)
+        #print("up_dist", upsampled_distances.shape)
         # global min pooling
         min_distances = -F.max_pool2d(-upsampled_distances,
                                       kernel_size=(upsampled_distances.size()[2],

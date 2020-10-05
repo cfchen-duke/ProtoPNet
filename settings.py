@@ -46,6 +46,7 @@ coefs = {
     'clst': 0.8,
     'sep': -0.08,
     'l1': 1e-4,
+    'fine': 0.001,
 }
 
 num_train_epochs = 1000
