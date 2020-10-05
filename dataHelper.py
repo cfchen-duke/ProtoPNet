@@ -701,7 +701,7 @@ def Lo1136iHelper():
     margins = csv['lesion margin']
     for margin in margins:
         for cat in ["train", "test_DONOTTOUCH", 'validation']:
-            save_dir = "/usr/xtmp/mammo/Lo1136i/" + cat + '/' + margin + '/'
+            save_dir = "/usr/xtmp/mammo/Lo1136i_with_fa/" + cat + '/' + margin + '/'
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
     paths = []
@@ -726,27 +726,35 @@ def Lo1136iHelper():
         image = windowing(win_cen, win_width, image)
         # crop
         x1, y1, x2, y2 = ast.literal_eval(bounding_boxes[index])
+        fa_mask = np.zeros(shape=image.shape)
+        fa_mask[0: min(x1, x2), :] = 1
+        fa_mask[:, 0: min(y1, y2)] = 1
+        fa_mask[max(x2, x1):, :] = 1
+        fa_mask[:, max(y2, y1):] = 1
         x1, y1, x2, y2 = max(0, min(x1, x2) - 100), max(0, min(y1, y2) - 100), \
                          min(image.shape[0], max(x1, x2) + 100), min(image.shape[1], max(y1, y2) + 100)
         roi = image[x1:x2, y1:y2]
+        fa_mask = fa_mask[x1:x2, y1:y2]
+
 
         # save image
         margin = margins[index]
         if train_num[margin] > 0:
-            np.save('/usr/xtmp/mammo/Lo1136i/train/' + margin + "/" + file[:-4], roi)
+            # saved shape = [2, height, width]
+            np.save('/usr/xtmp/mammo/Lo1136i_with_fa/train/' + margin + "/" + file[:-4], np.stack([roi, fa_mask]))
             train_num[margin] -= 1
         elif val_num[margin] > 0:
-            np.save('/usr/xtmp/mammo/Lo1136i/validation/' + margin + "/" + file[:-4], roi)
+            np.save('/usr/xtmp/mammo/Lo1136i_with_fa/validation/' + margin + "/" + file[:-4], np.stack([roi, fa_mask]))
             val_num[margin] -= 1
         elif test_num[margin]>0:
-            np.save('/usr/xtmp/mammo/Lo1136i/test_DONOTTOUCH/' + margin + "/" + file[:-4], roi)
+            np.save('/usr/xtmp/mammo/Lo1136i_with_fa/test_DONOTTOUCH/' + margin + "/" + file[:-4], np.stack([roi, fa_mask]))
             test_num[margin] -= 1
         print('saved!')
 
 
 
 if __name__ == "__main__":
-    # Lo1136iHelper()
+    Lo1136iHelper()
     # cropROI("/usr/project/xtmp/mammo/binary_Feb/five_classes_roi/train_context_roi/", augByWindow=False,
     #         datapath="/usr/project/xtmp/mammo/rawdata/Jan2020/PenRad_Dataset_SS_Final/sorted_by_mass_edges_Jan_in/train/",
     #         csvpath="/usr/project/xtmp/mammo/rawdata/Jan2020/Anotation_Master_adj.xlsx")
@@ -788,12 +796,9 @@ if __name__ == "__main__":
     #              skip=None)
 
     # print("start data augmenting")
-    for pos in ["Spiculated","Circumscribed", "Indistinct", "Microlobulated", "Obscured"]:
-        dataAugNumpy(
-            path="/usr/xtmp/mammo/Lo1136i/train/",
-            targetNumber=5000,
-            targetDir="/usr/xtmp/mammo/Lo1136i/train_augmented_5000/",
-            rot=True)
-    # Fides_visualization(10)
-    # Fidex_visualization_csv("fides_name_list_test.data")
-    # move_DOI_to_training()
+    # for pos in ["Spiculated","Circumscribed", "Indistinct", "Microlobulated", "Obscured"]:
+    #     dataAugNumpy(
+    #         path="/usr/xtmp/mammo/Lo1136i/train/",
+    #         targetNumber=5000,
+    #         targetDir="/usr/xtmp/mammo/Lo1136i/train_augmented_5000/",
+    #         rot=True)
