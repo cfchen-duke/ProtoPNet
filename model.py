@@ -193,10 +193,8 @@ class PPNet(nn.Module):
             return self.prototype_activation_function(distances)
 
     def forward(self, x):
-        # x is of dimension (batch, 3, 224, 224, 2)
-        #self.fine_annotation = x[x.shape[0], 0, x.shape[2], x.shape[3], 1].reshape(x.shape[0], 0, x.shape[2], x.shape[3])
-        self.fine_annotation = torch.zeros(size=(x.shape[0], x.shape[1], x.shape[2], x.shape[3])).cuda() #temporary line
-        #x = x[:, :, :, :, 0].view(x.shape[0], x.shape[1], x.shape[2], x.shape[3], -1)
+        # x is of dimension (batch, 4, 224, 224)
+        x = x[:, 0:3, :, :] #(no view, create slice, when no fa is available this will return x)
         distances = self.prototype_distances(x)
         '''
         we cannot refactor the lines below for similarity scores
@@ -208,7 +206,7 @@ class PPNet(nn.Module):
         print("up_dist", upsampled_distances.shape)
         print("fa_shape", self.fine_annotation.shape)
         fine_annotation_loss = torch.norm(upsampled_distances * self.fine_annotation)
-        print("fa_loss", fine_annotation_loss.shape)
+        print("fa_loss", fine_annotation_loss.shape, "=", fine_annotation_loss)
         # global min pooling
         min_distances = -F.max_pool2d(-upsampled_distances,
                                       kernel_size=(upsampled_distances.size()[2],
@@ -218,7 +216,7 @@ class PPNet(nn.Module):
         logits = self.last_layer(prototype_activations)
         if not self.class_specific:
             logits[:,0] = 0
-        return logits, min_distances
+        return logits, min_distances, upsampled_distances
 
     def push_forward(self, x):
         '''this method is needed for the pushing operation'''

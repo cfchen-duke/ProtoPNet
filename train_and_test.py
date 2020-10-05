@@ -34,7 +34,7 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
         with grad_req:
             # nn.Module has implemented __call__() function
             # so no need to call .forward
-            output, min_distances = model(input)
+            output, min_distances, upsampled_distances = model(input)
             # compute loss
             cross_entropy = torch.nn.functional.cross_entropy(output, target)
 
