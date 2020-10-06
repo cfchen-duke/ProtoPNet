@@ -192,16 +192,14 @@ class PPNet(nn.Module):
             return self.prototype_activation_function(distances)
 
     def forward(self, x):
-        # x is of dimension (batch, 4, 224, 224)
-        x = x[:, 0:3, :, :]  #(no view, create slice, when no fa is available this will return x)
+        # x is of dimension (batch, 4, spacial, spacial)
+        x = x[:, 0:3, :, :]  #(no view; create slice. When no fa is available this will return x)
         distances = self.prototype_distances(x)
         '''
         we cannot refactor the lines below for similarity scores
         because we need to return min_distances
         '''
-        #upsampled_distances = torch.nn.Upsample(size=(x.shape[0], self.prototype_shape[0], x.shape[2], x.shape[3]), mode="bilinear")(distances)
-        upsampled_distances = torch.nn.Upsample(size=(x.shape[2], x.shape[3]), mode="bilinear")(distances)
-        #print("up_dist", upsampled_distances.shape)
+        upsampled_distances = torch.nn.Upsample(size=(x.shape[2], x.shape[3]), mode="bilinear", align_corners=False)(distances)
         # global min pooling
         min_distances = -F.max_pool2d(-upsampled_distances,
                                       kernel_size=(upsampled_distances.size()[2],
