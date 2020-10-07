@@ -133,28 +133,35 @@ class DatasetFolder(datasets.DatasetFolder):
         path, target = self.samples[index]
         patient_id = path.split("/")[-1][:-4]
         sample = self.loader(path)
-        if self.target_size:
-            sample = resize(sample, self.target_size)
-        #  normalize to 0 to 1
-        # sample = (sample - np.amin(np.abs(sample))) / (np.amax(np.abs(sample))-np.amin(np.abs(sample)))
-        #  imagenet normalization
-        # mean = [0.485, 0.456, 0.406]
-        # std = [0.229, 0.224, 0.225]
-        # temp = []
-        # for i in range(3):
-        #     temp += [sample-mean[i] / std[i]]
+        if len(sample.shape) == 3:
+            if self.target_size:
+                sample = np.stack([resize(sample[0], self.target_size), resize(sample[1], self.target_size)])
+            temp = []
+            print(sample.shape)
+            temp = [sample[0], sample[0], sample[0], sample[1]]
+        else:
+            if self.target_size:
+                sample = resize(sample, self.target_size)
+            #  normalize to 0 to 1
+            # sample = (sample - np.amin(np.abs(sample))) / (np.amax(np.abs(sample))-np.amin(np.abs(sample)))
+            #  imagenet normalization
+            # mean = [0.485, 0.456, 0.406]
+            # std = [0.229, 0.224, 0.225]
+            # temp = []
+            # for i in range(3):
+            #     temp += [sample-mean[i] / std[i]]
 
-        # print("before transform", sample.shape)
-        if self.augment:
-            sample = random_rotation(sample, 0.7)
-        temp = []
-        for i in range(3):
-            # sample = random_rotation(sample)
-            # temp.append(dog(sample))
-            temp.append(sample)
+            # print("before transform", sample.shape)
+            if self.augment:
+                sample = random_rotation(sample, 0.7)
+            temp = []
+            for i in range(3):
+                # sample = random_rotation(sample)
+                # temp.append(dog(sample))
+                temp.append(sample)
         # temp = [sample, sample, sample]
         n = np.stack(temp)
-
+        print(n.shape)
         if self.transform is not None:
             sample = self.transform(n)
         if self.target_transform is not None:
