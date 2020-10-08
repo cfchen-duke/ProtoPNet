@@ -78,6 +78,9 @@ def push_prototypes(dataloader, # pytorch dataloader (must be unnormalized in [0
         start_index_of_search keeps track of the index of the image
         assigned to serve as prototype
         '''
+        if search_batch_input.shape[1] == 4:
+            search_batch_input = search_batch_input[:, 0:3, :, :]  #(no view, create slice)
+
         start_index_of_search_batch = push_iter * search_batch_size
 
         update_prototypes_on_batch(search_batch_input,
