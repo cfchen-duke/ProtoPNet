@@ -25,9 +25,11 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
     total_separation_cost = 0
     total_avg_separation_cost = 0
     total_fa_cost = 0
+    with_fa = False
 
     for i, (image, label, patient_id) in enumerate(dataloader):
         if image.shape[1] == 4:
+            with_fa = True
             fine_annotation = image[:, 3:4, :, :]
             image = image[:, 0:3, :, :]  #(no view, create slice)
         elif image.shape[1] == 3:
@@ -78,12 +80,13 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
 
                 #fine annotation loss
                 fine_annotation_cost = 0
-                proto_num_per_class = model.module.num_prototypes // model.module.num_classes
-                all_white_mask = torch.ones(image.shape[2], image.shape[3])
-                for index in range(image.shape[0]):
-                    fine_annotation_cost += torch.norm(upsampled_distances[index, :label[index] * proto_num_per_class] * all_white_mask) + \
-                        torch.norm(upsampled_distances[index, label[index] * proto_num_per_class : (label[index] + 1) * proto_num_per_class] * fine_annotation[index]) + \
-                            torch.norm(upsampled_distances[index, (label[index]+1) * proto_num_per_class:] * all_white_mask)
+                if with_fa:
+                    proto_num_per_class = model.module.num_prototypes // model.module.num_classes
+                    all_white_mask = torch.ones(image.shape[2], image.shape[3])
+                    for index in range(image.shape[0]):
+                        fine_annotation_cost += torch.norm(upsampled_distances[index, :label[index] * proto_num_per_class] * all_white_mask) + \
+                            torch.norm(upsampled_distances[index, label[index] * proto_num_per_class : (label[index] + 1) * proto_num_per_class] * fine_annotation[index]) + \
+                                torch.norm(upsampled_distances[index, (label[index]+1) * proto_num_per_class:] * all_white_mask)
                 
 
             else:
