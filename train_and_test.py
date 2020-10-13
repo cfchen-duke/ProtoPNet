@@ -2,10 +2,11 @@ import time
 import torch
 from sklearn.metrics import roc_auc_score
 import numpy as np
+import pandas as pd
 from helpers import list_of_distances, make_one_hot
 
 def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l1_mask=True,
-                   coefs=None, log=print):
+                   coefs=None, log=print, save_logits=False):
     '''
     model: the multi-gpu model
     dataloader:
@@ -48,6 +49,14 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
             # compute loss
             cross_entropy = torch.nn.functional.cross_entropy(output, target)
 
+            # only save to csv on test
+            if not is_train and save_logits:
+                df = pd.DataFrame({
+                    'image_id': patient_id,
+                    'output_score': [scores.cpu().numpy() for scores in output]
+                })
+                df.to_csv('test1012.csv', index=False)
+
             if class_specific:
                 max_dist = (model.module.prototype_shape[1]
                             * model.module.prototype_shape[2]
@@ -82,7 +91,7 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
                 fine_annotation_cost = 0
                 if with_fa:
                     proto_num_per_class = model.module.num_prototypes // model.module.num_classes
-                    all_white_mask = torch.ones(image.shape[2], image.shape[3])
+                    all_white_mask = torch.ones(image.shape[2], image.shape[3]).cuda()
                     for index in range(image.shape[0]):
                         fine_annotation_cost += torch.norm(upsampled_distances[index, :label[index] * proto_num_per_class] * all_white_mask) + \
                             torch.norm(upsampled_distances[index, label[index] * proto_num_per_class : (label[index] + 1) * proto_num_per_class] * fine_annotation[index]) + \
@@ -139,7 +148,7 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
             total_cross_entropy += cross_entropy.item()
             total_cluster_cost += cluster_cost.item()
             total_separation_cost += separation_cost.item()
-            total_fa_cost += fine_annotation_cost.item()
+            total_fa_cost += fine_annotation_cost
             if class_specific:
                 total_avg_separation_cost += avg_separation_cost.item()
 
@@ -200,11 +209,11 @@ def train(model, dataloader, optimizer, class_specific=False, coefs=None, log=pr
                           class_specific=class_specific, coefs=coefs, log=log)
 
 
-def test(model, dataloader, class_specific=False, log=print):
+def test(model, dataloader, class_specific=False, log=print, save_logits=False):
     log('\ttest')
     model.eval()
     return _train_or_test(model=model, dataloader=dataloader, optimizer=None,
-                          class_specific=class_specific, log=log)
+                          class_specific=class_specific, log=log, save_logits=save_logits)
 
 
 def last_only(model, log=print):

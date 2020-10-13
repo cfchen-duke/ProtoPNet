@@ -45,7 +45,7 @@ def main(test_dir, model_path):
             num_workers=4, pin_memory=False)
         print('test set size: {0}'.format(len(test_loader.dataset)))
 
-        accu = tnt.test(model=ppnet_multi, dataloader=test_loader, class_specific=class_specific, log=print)
+        accu = tnt.test(model=ppnet_multi, dataloader=test_loader, class_specific=class_specific, log=print, save_logits=True)
         print(accu)
 
 def draw_roc_curve(data_path, model_path, image_name, target_class, num_classes):
