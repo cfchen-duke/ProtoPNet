@@ -146,6 +146,7 @@ def last_only(model, log=print):
     for p in model.module.add_on_layers.parameters():
         p.requires_grad = False
     model.module.prototype_vectors.requires_grad = False
+    model.module.protobank_tensor.requires_grad = False
     for p in model.module.last_layer.parameters():
         p.requires_grad = True
     
@@ -158,6 +159,7 @@ def warm_only(model, log=print):
     for p in model.module.add_on_layers.parameters():
         p.requires_grad = True
     model.module.prototype_vectors.requires_grad = True
+    model.module.protobank_tensor.requires_grad = True
     for p in model.module.last_layer.parameters():
         p.requires_grad = True
     
@@ -170,6 +172,7 @@ def joint(model, log=print):
     for p in model.module.add_on_layers.parameters():
         p.requires_grad = True
     model.module.prototype_vectors.requires_grad = True
+    model.module.protobank_tensor.requires_grad = True
     for p in model.module.last_layer.parameters():
         p.requires_grad = True
     

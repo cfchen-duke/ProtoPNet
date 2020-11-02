@@ -105,7 +105,7 @@ class PPNet(nn.Module):
         self.prototype_vectors = nn.Parameter(torch.rand(self.prototype_shape),
                                               requires_grad=True)
 
-        self.bank_size = 20
+        self.bank_size = 6
         protobank_shape = list(self.prototype_shape)
         protobank_shape[0] = protobank_shape[0] * self.bank_size
         self.protobank_for = [nn.Parameter(torch.rand(self.prototype_shape).cuda(), requires_grad=True) for _ in range(self.bank_size)]
@@ -206,41 +206,14 @@ class PPNet(nn.Module):
         x = self.conv_features(x)
         x2 = x ** 2
         x2_patch_sum = F.conv2d(input=x2, weight=self.ones)
-
-        p2 = self.prototype_vectors ** 2
+        
+        # XXX ah there was a math error here! I was using prototype_tensor not
+        # protobank_tensor
+        p2 = self.protobank_tensor ** 2
         p2 = torch.sum(p2, dim=(1, 2, 3))
         # p2 is a vector of shape (num_prototypes,)
         # then we reshape it to (num_prototypes, 1, 1)
         p2_reshape = p2.view(-1, 1, 1)
-        # XXX First version, protobank for loop
-        #
-        # XXX this isnt quite working out with cuda right now. probably something
-        # that is going on in main with being able to set the vectors into cuda
-        min_dists = []
-        xps = []
-        for i in range(self.bank_size):
-            xp = F.conv2d(input=x, weight=self.protobank_for[i])
-            xps.append(xp.clone())
-            intermediate_result = - 2 * xp + p2_reshape  # use broadcast
-            # x2_patch_sum and intermediate_result are of the same shape
-            distances = F.relu(x2_patch_sum + intermediate_result)
-            # XXX your research code is literally going to be shitty the first time out
-            # so stop pretending like it has to be really good and is gonna be perfect
-            # on the first iteration
-            #
-            # XXX Also another thing I was thinking of is that first push is generally most
-            # startling for the network because it is a drastic change of weights from
-            # the original prototype weights to the pushed weights. Later epochs after
-            # that first push will have progressively smaller changes but that first push
-            # is really what hurts perf so much. It might be possible to do a random
-            # push at first and see if this works out. otherwise it might be helpful
-            # to explore the question from a reinforcement learning angle.
-            min_distances = -F.max_pool2d(-distances,
-                                          kernel_size=(distances.size()[2],
-                                                       distances.size()[3]))
-            min_dists.append(min_distances.view(-1, self.num_prototypes))
-        min_dists = torch.cat(min_dists)
-        # XXX end for
 
         # XXX next vectorize
         xpb = F.conv2d(input=x, weight=self.protobank_tensor)
@@ -248,13 +221,11 @@ class PPNet(nn.Module):
         # torch split is the opposite of cat. We did not want view after the conv op to
         # break up the tensor. Otherwise we need to use view pretty extensively to ensure
         # proper mathematic operations occur
-        xpb = torch.cat(xpb.split(self.num_prototypes, dim=1), dim=0).\
-            view(self.bank_size, -1, self.num_prototypes, last_dim, last_dim)
         intermediate_result = -2 * xpb + p2_reshape
+        intermediate_result = torch.cat([vec.unsqueeze(0) for vec in intermediate_result.split(self.num_prototypes, dim=1)], dim=0)
         intermediate_result = intermediate_result + x2_patch_sum
         distances = F.relu(intermediate_result).view(-1, self.num_prototypes, last_dim, last_dim)
         min_distances = -F.max_pool2d(-distances, kernel_size=(last_dim, last_dim)).squeeze()
-
         # XXX this is the version where we just take a minima. There can also be other variants
         # like where you just take an average of the memory bank. We can code this up later tho.
         return min_distances.view(self.bank_size, -1, self.num_prototypes).min(dim=0)[0]

@@ -27,7 +27,8 @@ print(os.environ['CUDA_VISIBLE_DEVICES'])
 
 # book keeping namings and code
 from settings import base_architecture, img_size, prototype_shape, num_classes, \
-                     prototype_activation_function, add_on_layers_type, experiment_run
+                     prototype_activation_function, add_on_layers_type, experiment_run, \
+                     do_initial_push
 
 base_architecture_type = re.match('^[a-z]*', base_architecture).group(0)
 
@@ -112,7 +113,8 @@ from settings import joint_optimizer_lrs, joint_lr_step_size
 joint_optimizer_specs = \
 [{'params': ppnet.features.parameters(), 'lr': joint_optimizer_lrs['features'], 'weight_decay': 1e-3}, # bias are now also being regularized
  {'params': ppnet.add_on_layers.parameters(), 'lr': joint_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
- {'params': ppnet.prototype_vectors, 'lr': joint_optimizer_lrs['prototype_vectors']},
+ {'params': ppnet.protobank_tensor, 'lr': joint_optimizer_lrs['prototype_vectors']},
+ #{'params': ppnet.prototype_vectors, 'lr': joint_optimizer_lrs['prototype_vectors']},
 ]
 joint_optimizer = torch.optim.Adam(joint_optimizer_specs)
 joint_lr_scheduler = torch.optim.lr_scheduler.StepLR(joint_optimizer, step_size=joint_lr_step_size, gamma=0.1)
@@ -120,7 +122,8 @@ joint_lr_scheduler = torch.optim.lr_scheduler.StepLR(joint_optimizer, step_size=
 from settings import warm_optimizer_lrs
 warm_optimizer_specs = \
 [{'params': ppnet.add_on_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
- {'params': ppnet.prototype_vectors, 'lr': warm_optimizer_lrs['prototype_vectors']},
+ {'params': ppnet.protobank_tensor, 'lr': warm_optimizer_lrs['prototype_vectors']},
+ #{'params': ppnet.prototype_vectors, 'lr': joint_optimizer_lrs['prototype_vectors']},
 ]
 warm_optimizer = torch.optim.Adam(warm_optimizer_specs)
 
@@ -137,6 +140,21 @@ from settings import num_train_epochs, num_warm_epochs, push_start, push_epochs
 # train the model
 log('start training')
 import copy
+if do_initial_push:
+    push.push_prototypes(
+        train_push_loader, # pytorch dataloader (must be unnormalized in [0,1])
+        prototype_network_parallel=ppnet_multi, # pytorch network with prototype_vectors
+        class_specific=class_specific,
+        preprocess_input_function=preprocess_input_function, # normalize if needed
+        prototype_layer_stride=1,
+        root_dir_for_saving_prototypes=img_dir, # if not None, prototypes will be saved here
+        epoch_number=0, # if not provided, prototypes saved previously will be overwritten
+        prototype_img_filename_prefix=prototype_img_filename_prefix,
+        prototype_self_act_filename_prefix=prototype_self_act_filename_prefix,
+        proto_bound_boxes_filename_prefix=proto_bound_boxes_filename_prefix,
+        save_prototype_class_identity=True,
+        log=log)
+
 for epoch in range(num_train_epochs):
     log('epoch: \t{0}'.format(epoch))
 
