@@ -1,5 +1,7 @@
 import Augmentor
 import os
+
+
 def makedir(path):
     '''
     if path does not exist in the file system, create it
@@ -17,7 +19,7 @@ target_folders = [os.path.join(target_dir, folder) for folder in next(os.walk(di
 
 for i in range(len(folders)):
     fd = folders[i]
-    tfd = target_folders[i]
+    tfd = os.path.abspath(target_folders[i])
     # rotation
     p = Augmentor.Pipeline(source_directory=fd, output_directory=tfd)
     p.rotate(probability=1, max_left_rotation=15, max_right_rotation=15)

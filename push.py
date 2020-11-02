@@ -9,6 +9,9 @@ import time
 from receptive_field import compute_rf_prototype
 from helpers import makedir, find_high_activation_crop
 
+# XXX my two ideas here are weight averaging for push and a memory bank. I think memory bank is the most
+# interesting item to implement first, but they both have similar implementation in code
+
 # push each prototype to the nearest patch in the training set
 def push_prototypes(dataloader, # pytorch dataloader (must be unnormalized in [0,1])
                     prototype_network_parallel, # pytorch network with prototype_vectors
@@ -204,22 +207,22 @@ def update_prototypes_on_batch(search_batch_input,
 
             global_min_proto_dist[j] = batch_min_proto_dist_j
             global_min_fmap_patches[j] = batch_min_fmap_patch_j
-            
+
             # get the receptive field boundary of the image patch
             # that generates the representation
             protoL_rf_info = prototype_network_parallel.module.proto_layer_rf_info
             rf_prototype_j = compute_rf_prototype(search_batch.size(2), batch_argmin_proto_dist_j, protoL_rf_info)
-            
+
             # get the whole image
             original_img_j = search_batch_input[rf_prototype_j[0]]
             original_img_j = original_img_j.numpy()
             original_img_j = np.transpose(original_img_j, (1, 2, 0))
             original_img_size = original_img_j.shape[0]
-            
+
             # crop out the receptive field
             rf_img_j = original_img_j[rf_prototype_j[1]:rf_prototype_j[2],
                                       rf_prototype_j[3]:rf_prototype_j[4], :]
-            
+
             # save the prototype receptive field information
             proto_rf_boxes[j, 0] = rf_prototype_j[0] + start_index_of_search_batch
             proto_rf_boxes[j, 1] = rf_prototype_j[1]
@@ -278,7 +281,7 @@ def update_prototypes_on_batch(search_batch_input,
                                overlayed_original_img_j,
                                vmin=0.0,
                                vmax=1.0)
-                    
+
                     # if different from the original (whole) image, save the prototype receptive field as png
                     if rf_img_j.shape[0] != original_img_size or rf_img_j.shape[1] != original_img_size:
                         plt.imsave(os.path.join(dir_for_saving_prototypes,
@@ -293,13 +296,13 @@ def update_prototypes_on_batch(search_batch_input,
                                    overlayed_rf_img_j,
                                    vmin=0.0,
                                    vmax=1.0)
-                    
+
                     # save the prototype image (highly activated region of the whole image)
                     plt.imsave(os.path.join(dir_for_saving_prototypes,
                                             prototype_img_filename_prefix + str(j) + '.png'),
                                proto_img_j,
                                vmin=0.0,
                                vmax=1.0)
-                
+
     if class_specific:
         del class_to_img_index_dict

@@ -41,7 +41,7 @@ class PPNet(nn.Module):
         self.num_prototypes = prototype_shape[0]
         self.num_classes = num_classes
         self.epsilon = 1e-4
-        
+
         # prototype_activation_function could be 'log', 'linear',
         # or a generic function that converts distance to similarity score
         self.prototype_activation_function = prototype_activation_function
@@ -101,10 +101,15 @@ class PPNet(nn.Module):
                 nn.Conv2d(in_channels=self.prototype_shape[1], out_channels=self.prototype_shape[1], kernel_size=1),
                 nn.Sigmoid()
                 )
-        
+
         self.prototype_vectors = nn.Parameter(torch.rand(self.prototype_shape),
                                               requires_grad=True)
 
+        self.bank_size = 20
+        protobank_shape = list(self.prototype_shape)
+        protobank_shape[0] = protobank_shape[0] * self.bank_size
+        self.protobank_for = [nn.Parameter(torch.rand(self.prototype_shape).cuda(), requires_grad=True) for _ in range(self.bank_size)]
+        self.protobank_tensor = nn.Parameter(torch.cat(self.protobank_for, dim=0), requires_grad=True)
         # do not make this just a tensor,
         # since it will not be moved automatically to gpu
         self.ones = nn.Parameter(torch.ones(self.prototype_shape),
@@ -163,17 +168,98 @@ class PPNet(nn.Module):
         # then we reshape it to (num_prototypes, 1, 1)
         p2_reshape = p2.view(-1, 1, 1)
 
+        # XXX the 2d conv op doesnt support the memory bank like I've envisioned it.
+        # a for loop could be possible, but thats slow. I think you can still format
+        # everything as a conv2d. because i think the 4th dimension is just batch.
+        # then you can do some view magic to reshape everything into the form you
+        # want
+        #
+        # Hmm... getting stuck on argmin... how to slice these things properly
+        # why not just make your stinky for loop and figure out how to vectorize
+        # later???
+        #
+        # XXX If you do F.conv2d(input=x, weight=proto_bank) where proto_bank
+        # is your tensor of prototypes then this will work the same as if
+        # you run a for loop and concatenate along the first dimension. Ultimately
+        # I think we have to run the whole thing thru the for loop and the vectorized
+        # version to double check everything works properly
         xp = F.conv2d(input=x, weight=self.prototype_vectors)
         intermediate_result = - 2 * xp + p2_reshape  # use broadcast
         # x2_patch_sum and intermediate_result are of the same shape
         distances = F.relu(x2_patch_sum + intermediate_result)
+        # XXX your research code is literally going to be shitty the first time out
+        # so stop pretending like it has to be really good and is gonna be perfect
+        # on the first iteration
+        #
+        # XXX Also another thing I was thinking of is that first push is generally most
+        # startling for the network because it is a drastic change of weights from
+        # the original prototype weights to the pushed weights. Later epochs after
+        # that first push will have progressively smaller changes but that first push
+        # is really what hurts perf so much.
 
         return distances
 
-    def prototype_distances(self, x):
+    def protobank_distances(self, x):
         '''
         x is the raw input
         '''
+        x = self.conv_features(x)
+        x2 = x ** 2
+        x2_patch_sum = F.conv2d(input=x2, weight=self.ones)
+
+        p2 = self.prototype_vectors ** 2
+        p2 = torch.sum(p2, dim=(1, 2, 3))
+        # p2 is a vector of shape (num_prototypes,)
+        # then we reshape it to (num_prototypes, 1, 1)
+        p2_reshape = p2.view(-1, 1, 1)
+        # XXX First version, protobank for loop
+        #
+        # XXX this isnt quite working out with cuda right now. probably something
+        # that is going on in main with being able to set the vectors into cuda
+        min_dists = []
+        xps = []
+        for i in range(self.bank_size):
+            xp = F.conv2d(input=x, weight=self.protobank_for[i])
+            xps.append(xp.clone())
+            intermediate_result = - 2 * xp + p2_reshape  # use broadcast
+            # x2_patch_sum and intermediate_result are of the same shape
+            distances = F.relu(x2_patch_sum + intermediate_result)
+            # XXX your research code is literally going to be shitty the first time out
+            # so stop pretending like it has to be really good and is gonna be perfect
+            # on the first iteration
+            #
+            # XXX Also another thing I was thinking of is that first push is generally most
+            # startling for the network because it is a drastic change of weights from
+            # the original prototype weights to the pushed weights. Later epochs after
+            # that first push will have progressively smaller changes but that first push
+            # is really what hurts perf so much. It might be possible to do a random
+            # push at first and see if this works out. otherwise it might be helpful
+            # to explore the question from a reinforcement learning angle.
+            min_distances = -F.max_pool2d(-distances,
+                                          kernel_size=(distances.size()[2],
+                                                       distances.size()[3]))
+            min_dists.append(min_distances.view(-1, self.num_prototypes))
+        min_dists = torch.cat(min_dists)
+        # XXX end for
+
+        # XXX next vectorize
+        xpb = F.conv2d(input=x, weight=self.protobank_tensor)
+        last_dim = xpb.size()[-1]
+        # torch split is the opposite of cat. We did not want view after the conv op to
+        # break up the tensor. Otherwise we need to use view pretty extensively to ensure
+        # proper mathematic operations occur
+        xpb = torch.cat(xpb.split(self.num_prototypes, dim=1), dim=0).\
+            view(self.bank_size, -1, self.num_prototypes, last_dim, last_dim)
+        intermediate_result = -2 * xpb + p2_reshape
+        intermediate_result = intermediate_result + x2_patch_sum
+        distances = F.relu(intermediate_result).view(-1, self.num_prototypes, last_dim, last_dim)
+        min_distances = -F.max_pool2d(-distances, kernel_size=(last_dim, last_dim)).squeeze()
+
+        # XXX this is the version where we just take a minima. There can also be other variants
+        # like where you just take an average of the memory bank. We can code this up later tho.
+        return min_distances.view(self.bank_size, -1, self.num_prototypes).min(dim=0)[0]
+
+    def prototype_distances(self, x):
         conv_features = self.conv_features(x)
         distances = self._l2_convolution(conv_features)
         return distances
@@ -186,17 +272,22 @@ class PPNet(nn.Module):
         else:
             return self.prototype_activation_function(distances)
 
+    def proto_bank_forward(self, x):
+        conv_features = self.conv_features(x)
+        distances = self._l2_convolution(conv_features)
+        return distances
+
     def forward(self, x):
-        distances = self.prototype_distances(x)
+        min_distances = self.protobank_distances(x)
         '''
         we cannot refactor the lines below for similarity scores
         because we need to return min_distances
         '''
         # global min pooling
-        min_distances = -F.max_pool2d(-distances,
-                                      kernel_size=(distances.size()[2],
-                                                   distances.size()[3]))
-        min_distances = min_distances.view(-1, self.num_prototypes)
+        #min_distances = -F.max_pool2d(-distances,
+        #                              kernel_size=(distances.size()[2],
+        #                                           distances.size()[3]))
+        #min_distances = min_distances.view(-1, self.num_prototypes)
         prototype_activations = self.distance_2_similarity(min_distances)
         logits = self.last_layer(prototype_activations)
         return logits, min_distances
@@ -304,4 +395,3 @@ def construct_PPNet(base_architecture, pretrained=True, img_size=224,
                  init_weights=True,
                  prototype_activation_function=prototype_activation_function,
                  add_on_layers_type=add_on_layers_type)
-

@@ -1,4 +1,4 @@
-base_architecture = 'vgg19'
+base_architecture = 'resnet34'
 img_size = 224
 prototype_shape = (2000, 128, 1, 1)
 num_classes = 200
@@ -8,7 +8,7 @@ add_on_layers_type = 'regular'
 experiment_run = '003'
 
 data_path = './datasets/cub200_cropped/'
-train_dir = data_path + 'train_cropped_augmented/'
+train_dir = data_path + 'train_cropped/'
 test_dir = data_path + 'test_cropped/'
 train_push_dir = data_path + 'train_cropped/'
 train_batch_size = 80
@@ -33,7 +33,8 @@ coefs = {
 }
 
 num_train_epochs = 1000
-num_warm_epochs = 5
+num_warm_epochs = 1
 
-push_start = 10
-push_epochs = [i for i in range(num_train_epochs) if i % 10 == 0]
+# XXX change both of these back
+push_start = 1
+push_epochs = [i for i in range(num_train_epochs) if i % 1 == 0]
