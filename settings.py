@@ -14,7 +14,6 @@ train_push_dir = data_path + 'train_cropped_augmented/'
 train_batch_size = 80
 test_batch_size = 100
 train_push_batch_size = 75
-do_initial_push = False
 
 joint_optimizer_lrs = {'features': 1e-4,
                        'add_on_layers': 3e-3,
@@ -36,6 +35,10 @@ coefs = {
 num_train_epochs = 1000
 num_warm_epochs = 5
 
-# XXX change both of these back
 push_start = 10
 push_epochs = [i for i in range(num_train_epochs) if i % 10 == 0]
+
+# updates on original spec
+do_initial_push = False
+use_protobank = True
+bank_size = 6
