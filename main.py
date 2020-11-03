@@ -183,19 +183,7 @@ for epoch in range(num_train_epochs):
                                 target_accu=0.70, log=log)
 
     if epoch >= push_start and epoch in push_epochs:
-        push.push_prototypes(
-            train_push_loader, # pytorch dataloader (must be unnormalized in [0,1])
-            prototype_network_parallel=ppnet_multi, # pytorch network with prototype_vectors
-            class_specific=class_specific,
-            preprocess_input_function=preprocess_input_function, # normalize if needed
-            prototype_layer_stride=1,
-            root_dir_for_saving_prototypes=img_dir, # if not None, prototypes will be saved here
-            epoch_number=epoch, # if not provided, prototypes saved previously will be overwritten
-            prototype_img_filename_prefix=prototype_img_filename_prefix,
-            prototype_self_act_filename_prefix=prototype_self_act_filename_prefix,
-            proto_bound_boxes_filename_prefix=proto_bound_boxes_filename_prefix,
-            save_prototype_class_identity=True,
-            log=log)
+        perform_push(pusher, epoch)
         accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
                         class_specific=class_specific, log=log)
         save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'push', accu=accu,
