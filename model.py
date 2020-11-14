@@ -33,7 +33,7 @@ class PPNet(nn.Module):
     def __init__(self, features, img_size, prototype_shape,
                  proto_layer_rf_info, num_classes, init_weights=True,
                  prototype_activation_function='log',
-                 add_on_layers_type='bottleneck'):
+                 add_on_layers_type='bottleneck', bank_size=20):
 
         super(PPNet, self).__init__()
         self.img_size = img_size
@@ -41,7 +41,7 @@ class PPNet(nn.Module):
         self.num_prototypes = prototype_shape[0]
         self.num_classes = num_classes
         self.epsilon = 1e-4
-        
+
         # prototype_activation_function could be 'log', 'linear',
         # or a generic function that converts distance to similarity score
         self.prototype_activation_function = prototype_activation_function
@@ -101,10 +101,14 @@ class PPNet(nn.Module):
                 nn.Conv2d(in_channels=self.prototype_shape[1], out_channels=self.prototype_shape[1], kernel_size=1),
                 nn.Sigmoid()
                 )
-        
+
         self.prototype_vectors = nn.Parameter(torch.rand(self.prototype_shape),
                                               requires_grad=True)
 
+        self.bank_size = bank_size
+        protobank_shape = list(self.prototype_shape)
+        protobank_shape[0] = protobank_shape[0] * self.bank_size
+        self.protobank_tensor = nn.Parameter(torch.rand(protobank_shape), requires_grad=True)
         # do not make this just a tensor,
         # since it will not be moved automatically to gpu
         self.ones = nn.Parameter(torch.ones(self.prototype_shape),
@@ -170,13 +174,39 @@ class PPNet(nn.Module):
 
         return distances
 
-    def prototype_distances(self, x):
+    def _l2_protobank(self, x):
         '''
         x is the raw input
         '''
+        x2 = x ** 2
+        x2_patch_sum = F.conv2d(input=x2, weight=self.ones)
+
+        p2 = self.protobank_tensor ** 2
+        p2 = torch.sum(p2, dim=(1, 2, 3))
+        # p2 is a vector of shape (num_prototypes,)
+        # then we reshape it to (num_prototypes, 1, 1)
+        p2_reshape = p2.view(-1, 1, 1)
+
+        # vectorize
+        xpb = F.conv2d(input=x, weight=self.protobank_tensor)
+        last_dim = xpb.size()[-1]
+        tmp = -2 * xpb + p2_reshape
+        # torch split is the opposite of cat. We did not want view after the conv op to
+        # break up the tensor. Otherwise we need to use view pretty extensively to
+        # ensure proper mathematic operations occur
+        tmp = torch.cat([v.unsqueeze(0) for v in tmp.split(self.num_prototypes, dim=1)], dim=0)
+        tmp = tmp + x2_patch_sum
+        distances = F.relu(tmp).view(-1, self.num_prototypes, last_dim, last_dim)
+        return distances
+
+    def prototype_distances(self, x):
         conv_features = self.conv_features(x)
         distances = self._l2_convolution(conv_features)
-        return distances
+        return conv_features, distances
+
+    def protobank_distances(self, x):
+        conv_features = self.conv_features(x)
+        return conv_features, self._l2_protobank(conv_features)
 
     def distance_2_similarity(self, distances):
         if self.prototype_activation_function == 'log':
@@ -186,8 +216,8 @@ class PPNet(nn.Module):
         else:
             return self.prototype_activation_function(distances)
 
-    def forward(self, x):
-        distances = self.prototype_distances(x)
+    def forward_orig(self, x):
+        _, distances = self.prototype_distances(x)
         '''
         we cannot refactor the lines below for similarity scores
         because we need to return min_distances
@@ -201,11 +231,23 @@ class PPNet(nn.Module):
         logits = self.last_layer(prototype_activations)
         return logits, min_distances
 
-    def push_forward(self, x):
-        '''this method is needed for the pushing operation'''
-        conv_output = self.conv_features(x)
-        distances = self._l2_convolution(conv_output)
-        return conv_output, distances
+    def forward_protobank(self, x):
+        _, distances = self.protobank_distances(x)
+        last_dim = distances.size(-1)
+        min_distances = -F.max_pool2d(-distances, kernel_size=(last_dim, last_dim))
+        # this is the version where we just take a minima. There can also be other
+        # variants like where you just take an average/sum of the memory bank. We can
+        # code this up later tho.
+        min_distances = min_distances.view(self.bank_size, -1, self.num_prototypes).min(dim=0)[0]
+        prototype_activations = self.distance_2_similarity(min_distances)
+        logits = self.last_layer(prototype_activations)
+        return logits, min_distances
+
+    def forward(self, x):
+        if self.bank_size > 1:
+            return self.forward_protobank(x)
+        else:
+            return self.forward_orig(x)
 
     def prune_prototypes(self, prototypes_to_prune):
         '''
@@ -288,7 +330,8 @@ class PPNet(nn.Module):
 def construct_PPNet(base_architecture, pretrained=True, img_size=224,
                     prototype_shape=(2000, 512, 1, 1), num_classes=200,
                     prototype_activation_function='log',
-                    add_on_layers_type='bottleneck'):
+                    add_on_layers_type='bottleneck',
+                    bank_size=20):
     features = base_architecture_to_features[base_architecture](pretrained=pretrained)
     layer_filter_sizes, layer_strides, layer_paddings = features.conv_info()
     proto_layer_rf_info = compute_proto_layer_rf_info_v2(img_size=img_size,
@@ -303,5 +346,5 @@ def construct_PPNet(base_architecture, pretrained=True, img_size=224,
                  num_classes=num_classes,
                  init_weights=True,
                  prototype_activation_function=prototype_activation_function,
-                 add_on_layers_type=add_on_layers_type)
-
+                 add_on_layers_type=add_on_layers_type,
+                 bank_size=bank_size)

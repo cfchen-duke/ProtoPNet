@@ -1,5 +1,6 @@
 import os
 import shutil
+import copy
 
 import torch
 import torch.utils.data
@@ -12,12 +13,14 @@ import re
 
 from helpers import makedir
 import model
-import push
+from push import Pusher
 import prune
 import train_and_test as tnt
 import save
 from log import create_logger
 from preprocess import mean, std, preprocess_input_function
+from settings import *
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-gpuid', nargs=1, type=str, default='0') # python3 main.py -gpuid=0,1,2,3
@@ -26,8 +29,6 @@ os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid[0]
 print(os.environ['CUDA_VISIBLE_DEVICES'])
 
 # book keeping namings and code
-from settings import base_architecture, img_size, prototype_shape, num_classes, \
-                     prototype_activation_function, add_on_layers_type, experiment_run
 
 base_architecture_type = re.match('^[a-z]*', base_architecture).group(0)
 
@@ -48,8 +49,14 @@ prototype_self_act_filename_prefix = 'prototype-self-act'
 proto_bound_boxes_filename_prefix = 'bb'
 
 # load the data
-from settings import train_dir, test_dir, train_push_dir, \
-                     train_batch_size, test_batch_size, train_push_batch_size
+
+
+def perform_push(pusher, epoch_number):
+    if use_protobank:
+        pusher.push_protobank(epoch_number)
+    else:
+        pusher.push_orig(epoch_number)
+
 
 normalize = transforms.Normalize(mean=mean,
                                  std=std)
@@ -100,7 +107,8 @@ ppnet = model.construct_PPNet(base_architecture=base_architecture,
                               prototype_shape=prototype_shape,
                               num_classes=num_classes,
                               prototype_activation_function=prototype_activation_function,
-                              add_on_layers_type=add_on_layers_type)
+                              add_on_layers_type=add_on_layers_type,
+                              bank_size=bank_size)
 #if prototype_activation_function == 'linear':
 #    ppnet.set_last_layer_incorrect_connection(incorrect_strength=0)
 ppnet = ppnet.cuda()
@@ -108,35 +116,54 @@ ppnet_multi = torch.nn.DataParallel(ppnet)
 class_specific = True
 
 # define optimizer
-from settings import joint_optimizer_lrs, joint_lr_step_size
+if use_protobank:
+    prototype_params = {
+        'params': ppnet.protobank_tensor,
+        'lr': joint_optimizer_lrs['prototype_vectors']
+    }
+else:
+    prototype_params = {
+        'params': ppnet.prototype_vectors,
+        'lr': joint_optimizer_lrs['prototype_vectors']
+    }
+
 joint_optimizer_specs = \
 [{'params': ppnet.features.parameters(), 'lr': joint_optimizer_lrs['features'], 'weight_decay': 1e-3}, # bias are now also being regularized
  {'params': ppnet.add_on_layers.parameters(), 'lr': joint_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
- {'params': ppnet.prototype_vectors, 'lr': joint_optimizer_lrs['prototype_vectors']},
+ prototype_params,
 ]
 joint_optimizer = torch.optim.Adam(joint_optimizer_specs)
 joint_lr_scheduler = torch.optim.lr_scheduler.StepLR(joint_optimizer, step_size=joint_lr_step_size, gamma=0.1)
 
-from settings import warm_optimizer_lrs
 warm_optimizer_specs = \
 [{'params': ppnet.add_on_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
- {'params': ppnet.prototype_vectors, 'lr': warm_optimizer_lrs['prototype_vectors']},
+ prototype_params,
 ]
 warm_optimizer = torch.optim.Adam(warm_optimizer_specs)
 
-from settings import last_layer_optimizer_lr
 last_layer_optimizer_specs = [{'params': ppnet.last_layer.parameters(), 'lr': last_layer_optimizer_lr}]
 last_layer_optimizer = torch.optim.Adam(last_layer_optimizer_specs)
 
-# weighting of different training losses
-from settings import coefs
-
-# number of training epochs, number of warm epochs, push start epoch, push epochs
-from settings import num_train_epochs, num_warm_epochs, push_start, push_epochs
-
 # train the model
 log('start training')
-import copy
+pusher = Pusher(
+    train_push_loader,
+    prototype_network_parallel=ppnet_multi,
+    bank_size=bank_size,
+    class_specific=class_specific,
+    preprocess_input_function=preprocess_input_function, # normalize if needed
+    prototype_layer_stride=1,
+    dir_for_saving_prototypes=img_dir, # if not None, prototypes will be saved here
+    prototype_img_filename_prefix=prototype_img_filename_prefix,
+    prototype_self_act_filename_prefix=prototype_self_act_filename_prefix,
+    proto_bound_boxes_filename_prefix=proto_bound_boxes_filename_prefix,
+    save_prototype_class_identity=True,
+    log=log
+)
+
+if do_initial_push:
+    perform_push(pusher, 0)
+
 for epoch in range(num_train_epochs):
     log('epoch: \t{0}'.format(epoch))
 
@@ -156,19 +183,7 @@ for epoch in range(num_train_epochs):
                                 target_accu=0.70, log=log)
 
     if epoch >= push_start and epoch in push_epochs:
-        push.push_prototypes(
-            train_push_loader, # pytorch dataloader (must be unnormalized in [0,1])
-            prototype_network_parallel=ppnet_multi, # pytorch network with prototype_vectors
-            class_specific=class_specific,
-            preprocess_input_function=preprocess_input_function, # normalize if needed
-            prototype_layer_stride=1,
-            root_dir_for_saving_prototypes=img_dir, # if not None, prototypes will be saved here
-            epoch_number=epoch, # if not provided, prototypes saved previously will be overwritten
-            prototype_img_filename_prefix=prototype_img_filename_prefix,
-            prototype_self_act_filename_prefix=prototype_self_act_filename_prefix,
-            proto_bound_boxes_filename_prefix=proto_bound_boxes_filename_prefix,
-            save_prototype_class_identity=True,
-            log=log)
+        perform_push(pusher, epoch)
         accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
                         class_specific=class_specific, log=log)
         save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'push', accu=accu,
@@ -184,6 +199,5 @@ for epoch in range(num_train_epochs):
                                 class_specific=class_specific, log=log)
                 save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + '_' + str(i) + 'push', accu=accu,
                                             target_accu=0.70, log=log)
-   
-logclose()
 
+logclose()

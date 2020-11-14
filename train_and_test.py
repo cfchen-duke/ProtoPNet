@@ -56,12 +56,12 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
                 avg_separation_cost = \
                     torch.sum(min_distances * prototypes_of_wrong_class, dim=1) / torch.sum(prototypes_of_wrong_class, dim=1)
                 avg_separation_cost = torch.mean(avg_separation_cost)
-                
+
                 if use_l1_mask:
                     l1_mask = 1 - torch.t(model.module.prototype_class_identity).cuda()
                     l1 = (model.module.last_layer.weight * l1_mask).norm(p=1)
                 else:
-                    l1 = model.module.last_layer.weight.norm(p=1) 
+                    l1 = model.module.last_layer.weight.norm(p=1)
 
             else:
                 min_distance, _ = torch.min(min_distances, dim=1)
@@ -126,7 +126,7 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
 
 def train(model, dataloader, optimizer, class_specific=False, coefs=None, log=print):
     assert(optimizer is not None)
-    
+
     log('\ttrain')
     model.train()
     return _train_or_test(model=model, dataloader=dataloader, optimizer=optimizer,
@@ -146,9 +146,10 @@ def last_only(model, log=print):
     for p in model.module.add_on_layers.parameters():
         p.requires_grad = False
     model.module.prototype_vectors.requires_grad = False
+    model.module.protobank_tensor.requires_grad = False
     for p in model.module.last_layer.parameters():
         p.requires_grad = True
-    
+
     log('\tlast layer')
 
 
@@ -158,9 +159,10 @@ def warm_only(model, log=print):
     for p in model.module.add_on_layers.parameters():
         p.requires_grad = True
     model.module.prototype_vectors.requires_grad = True
+    model.module.protobank_tensor.requires_grad = True
     for p in model.module.last_layer.parameters():
         p.requires_grad = True
-    
+
     log('\twarm')
 
 
@@ -170,7 +172,8 @@ def joint(model, log=print):
     for p in model.module.add_on_layers.parameters():
         p.requires_grad = True
     model.module.prototype_vectors.requires_grad = True
+    model.module.protobank_tensor.requires_grad = True
     for p in model.module.last_layer.parameters():
         p.requires_grad = True
-    
+
     log('\tjoint')

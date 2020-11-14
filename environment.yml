@@ -1,0 +1,17 @@
+name: protopnet
+dependencies:
+  - python=3.7
+  - ipython
+  - numpy
+  - pandas
+  - pytorch
+  - torchvision
+  - cudatoolkit
+  - scipy
+  - opencv
+  - matplotlib
+  - pip:
+    - Augmentor
+channels:
+  - pytorch
+  - conda-forge
