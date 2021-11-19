@@ -265,6 +265,7 @@ for epoch in range(num_train_epochs):
             dataloader=test_loader,
             class_specific=class_specific,
             log=log,
+            labels=labels,
         )
         save.save_model_w_condition(
             model=ppnet,

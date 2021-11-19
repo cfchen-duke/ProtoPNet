@@ -49,7 +49,7 @@ def _train_or_test(
             output, min_distances = model(input)
 
             # compute loss
-            cross_entropy = torch.nn.functional.cross_entropy(output, target)
+            cross_entropy = torch.nn.functional.binary_cross_entropy(output, target)
 
             if class_specific:
                 max_dist = (
