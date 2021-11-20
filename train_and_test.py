@@ -49,7 +49,7 @@ def _train_or_test(
             output, min_distances = model(input)
 
             # compute loss
-            cross_entropy = torch.nn.functional.binary_cross_entropy(output, target)
+            cross_entropy = torch.nn.functional.cross_entropy(output, target)
 
             if class_specific:
                 max_dist = (
@@ -241,9 +241,11 @@ def get_performance(predictions, targets, labels):
     class_metric = {}
 
     accuracy = accuracy_score(targets, predictions)
-    precision = list(precision_score(targets, predictions, label_keys, average=None))
-    recall = list(recall_score(targets, predictions, label_keys, average=None))
-    f1 = list(f1_score(targets, predictions, label_keys, average=None))
+    precision = list(
+        precision_score(targets, predictions, labels=label_keys, average=None)
+    )
+    recall = list(recall_score(targets, predictions, labels=label_keys, average=None))
+    f1 = list(f1_score(targets, predictions, labels=label_keys, average=None))
 
     for label in labels.keys():
         class_metric[label] = {
