@@ -86,6 +86,7 @@ train_push_dataset = ImageDataset(
         transforms.ToTensor(),
     ])
 )
+
 # test dataset
 test_dataset = ImageDataset(
     data_csv_path, train=False, test=True, transform= transforms.Compose([
@@ -94,6 +95,7 @@ test_dataset = ImageDataset(
         normalize,
     ])
 )
+
 # train data loader
 train_loader = DataLoader(
     train_dataset,
@@ -349,5 +351,4 @@ for epoch in range(num_train_epochs):
                     target_accu=0.70,
                     log=log,
                 )
-
 logclose()

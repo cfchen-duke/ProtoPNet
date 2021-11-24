@@ -1,4 +1,4 @@
-base_architecture = 'vgg19'
+base_architecture = 'resnet152'
 img_size = 224
 num_prototypes = 10
 num_classes = 200
