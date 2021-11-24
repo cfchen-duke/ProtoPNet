@@ -8,6 +8,8 @@ import torchvision.datasets as datasets
 
 import argparse
 
+from torch.utils.data import DataLoader
+import pandas as pd
 from helpers import makedir
 import model
 import push
@@ -15,8 +17,9 @@ import prune
 import train_and_test as tnt
 import save
 from log import create_logger
+from make_dataset import ImageDataset
 from preprocess import mean, std, preprocess_input_function
-
+import settings as config
 parser = argparse.ArgumentParser()
 parser.add_argument('-gpuid', nargs=1, type=str, default='0')
 parser.add_argument('-modeldir', nargs=1, type=str)
@@ -66,47 +69,95 @@ test_batch_size = 100
 img_size = 224
 train_push_batch_size = 80
 
-normalize = transforms.Normalize(mean=mean,
-                                 std=std)
+normalize = transforms.Normalize( mean=mean, std=std)
+data_csv_path = pd.read_csv(config.data_csv_path)
 
-# train set
-train_dataset = datasets.ImageFolder(
-    train_dir,
-    transforms.Compose([
+train_dataset = ImageDataset(
+    data_csv_path, train=True, test=False, transform= transforms.Compose([
         transforms.Resize(size=(img_size, img_size)),
         transforms.ToTensor(),
         normalize,
-    ]))
-train_loader = torch.utils.data.DataLoader(
-    train_dataset, batch_size=train_batch_size, shuffle=True,
-    num_workers=4, pin_memory=False)
+    ])
+)
+
+train_push_dataset = ImageDataset(
+    data_csv_path, train=True, test=False, transform= transforms.Compose([
+        transforms.Resize(size=(img_size, img_size)),
+        transforms.ToTensor(),
+    ])
+)
+# test dataset
+test_dataset = ImageDataset(
+    data_csv_path, train=False, test=True, transform= transforms.Compose([
+        transforms.Resize(size=(img_size, img_size)),
+        transforms.ToTensor(),
+        normalize,
+    ])
+)
+# train data loader
+train_loader = DataLoader(
+    train_dataset,
+    batch_size=train_batch_size,
+    shuffle=True,
+    num_workers=4,
+    pin_memory=False
+)
+
+# train push data loader
+train_push_loader = DataLoader(
+    train_dataset,
+    batch_size=train_batch_size,
+    shuffle=False,
+    num_workers=4,
+    pin_memory=False
+)
+
+# test data loader
+test_loader = DataLoader(
+    test_dataset,
+    batch_size=test_batch_size,
+    shuffle=False,
+    num_workers=4,
+    pin_memory=False
+)
+# train set
+# train_dataset = datasets.ImageFolder(
+#     train_dir,
+#     transforms.Compose([
+#         transforms.Resize(size=(img_size, img_size)),
+#         transforms.ToTensor(),
+#         normalize,
+#     ]))
+# train_loader = torch.utils.data.DataLoader(
+#     train_dataset, batch_size=train_batch_size, shuffle=True,
+#     num_workers=4, pin_memory=False)
 
 # test set
-test_dataset = datasets.ImageFolder(
-    test_dir,
-    transforms.Compose([
-        transforms.Resize(size=(img_size, img_size)),
-        transforms.ToTensor(),
-        normalize,
-    ]))
-test_loader = torch.utils.data.DataLoader(
-    test_dataset, batch_size=test_batch_size, shuffle=False,
-    num_workers=4, pin_memory=False)
+# test_dataset = datasets.ImageFolder(
+#     test_dir,
+#     transforms.Compose([
+#         transforms.Resize(size=(img_size, img_size)),
+#         transforms.ToTensor(),
+#         normalize,
+#     ]))
+# test_loader = torch.utils.data.DataLoader(
+#     test_dataset, batch_size=test_batch_size, shuffle=False,
+#     num_workers=4, pin_memory=False)
 
 log('training set size: {0}'.format(len(train_loader.dataset)))
 log('test set size: {0}'.format(len(test_loader.dataset)))
 log('batch size: {0}'.format(train_batch_size))
 
 # push set: needed for pruning because it is unnormalized
-train_push_dataset = datasets.ImageFolder(
-    train_push_dir,
-    transforms.Compose([
-        transforms.Resize(size=(img_size, img_size)),
-        transforms.ToTensor(),
-    ]))
-train_push_loader = torch.utils.data.DataLoader(
-    train_push_dataset, batch_size=train_push_batch_size, shuffle=False,
-    num_workers=4, pin_memory=False)
+# train_push_dataset = datasets.ImageFolder(
+#     train_push_dir,
+#     transforms.Compose([
+#         transforms.Resize(size=(img_size, img_size)),
+#         transforms.ToTensor(),
+#     ]))
+# train_push_loader = torch.utils.data.DataLoader(
+#     train_push_dataset, batch_size=train_push_batch_size, shuffle=False,
+#     num_workers=4, pin_memory=False)
     
 log('push set size: {0}'.format(len(train_push_loader.dataset)))
 

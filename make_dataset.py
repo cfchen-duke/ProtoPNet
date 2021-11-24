@@ -13,16 +13,19 @@ class ImageDataset(Dataset):
         self.csv = csv
         self.train = train
         self.test = test
+        self.image_names=[]
         self.all_image_names = self.csv[:]['img']
         self.all_labels = np.array(self.csv.drop(['img'], axis=1))
         self.train_ratio = int(0.8 * len(self.csv))
         self.test_ratio = len(self.csv) - self.train_ratio
+        self.label_names = csv.keys()[1::]
+        self.class_to_idx = {self.label_names[i]:i+1 for i in range (len(self.label_names))}
+        self.idx_to_class = {i+1:self.label_names[i] for i in range (len(self.label_names))}
         # set the training data images and labels
         if self.train:
             print(f"Number of training images: {self.train_ratio}")
             self.image_names = list(self.all_image_names[:self.train_ratio])
             self.labels = list(self.all_labels[:self.train_ratio])
-
             self.transform = transform
 
         # set the validation data images and labels
@@ -47,7 +50,7 @@ class ImageDataset(Dataset):
         return len(self.image_names)
 
     def __getitem__(self, index):
-        image = cv2.imread(config.data_img_path +'/'+ self.image_names[index])
+        image = cv2.imread(config.data_img_path + '/' + self.image_names[index])
         # convert the image from BGR to RGB color format
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         # apply image transforms
