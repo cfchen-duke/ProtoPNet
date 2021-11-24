@@ -1,4 +1,6 @@
 import copy
+
+from make_dataset import ImageDataset
 from settings import num_train_epochs, num_warm_epochs, push_start, push_epochs
 from settings import coefs
 from settings import last_layer_optimizer_lr
@@ -15,6 +17,7 @@ from settings import (
 from settings import (
     base_architecture,
     img_size,
+    data_csv_path,
     prototype_shape,
     num_classes,
     prototype_activation_function,
@@ -26,6 +29,8 @@ import shutil
 
 import torch
 import torch.utils.data
+from torch.utils.data import DataLoader
+
 
 # import torch.utils.data.distributed
 import torchvision.transforms as transforms
@@ -77,60 +82,106 @@ proto_bound_boxes_filename_prefix = "bb"
 
 normalize = transforms.Normalize(mean=mean, std=std)
 
-# all datasets
-# train set
-train_dataset = datasets.ImageFolder(
-    train_dir,
-    transforms.Compose(
-        [
-            transforms.Resize(size=(img_size, img_size)),
-            transforms.ToTensor(),
-            normalize,
-        ]
-    ),
+train_dataset = ImageDataset(
+    data_csv_path, train=True, test=False, transform= transforms.Compose([
+        transforms.Resize(size=(img_size, img_size)),
+        transforms.ToTensor(),
+    ])
 )
-train_loader = torch.utils.data.DataLoader(
+
+train_push_dataset = ImageDataset(
+    data_csv_path, train=True, test=False, transform= transforms.Compose([
+        transforms.Resize(size=(img_size, img_size)),
+        transforms.ToTensor(),
+    ])
+)
+# test dataset
+test_dataset = ImageDataset(
+    data_csv_path, train=False, test=False, transform= transforms.Compose([
+        transforms.Resize(size=(img_size, img_size)),
+        transforms.ToTensor(),
+    ])
+)
+# train data loader
+train_loader = DataLoader(
     train_dataset,
     batch_size=train_batch_size,
     shuffle=True,
     num_workers=4,
-    pin_memory=False,
+    pin_memory=False
 )
-# push set
-train_push_dataset = datasets.ImageFolder(
-    train_push_dir,
-    transforms.Compose(
-        [
-            transforms.Resize(size=(img_size, img_size)),
-            transforms.ToTensor(),
-        ]
-    ),
-)
-train_push_loader = torch.utils.data.DataLoader(
-    train_push_dataset,
-    batch_size=train_push_batch_size,
+
+# train push data loader
+train_push_loader = DataLoader(
+    train_dataset,
+    batch_size=train_batch_size,
     shuffle=False,
     num_workers=4,
-    pin_memory=False,
+    pin_memory=False
 )
-# test set
-test_dataset = datasets.ImageFolder(
-    test_dir,
-    transforms.Compose(
-        [
-            transforms.Resize(size=(img_size, img_size)),
-            transforms.ToTensor(),
-            normalize,
-        ]
-    ),
-)
-test_loader = torch.utils.data.DataLoader(
+
+# test data loader
+test_loader = DataLoader(
     test_dataset,
     batch_size=test_batch_size,
     shuffle=False,
     num_workers=4,
-    pin_memory=False,
+    pin_memory=False
 )
+# all datasets
+# train set
+# train_dataset = datasets.ImageFolder(
+#     train_dir,
+#     transforms.Compose(
+#         [
+#             transforms.Resize(size=(img_size, img_size)),
+#             transforms.ToTensor(),
+#             normalize,
+#         ]
+#     ),
+# )
+# train_loader = torch.utils.data.DataLoader(
+#     train_dataset,
+#     batch_size=train_batch_size,
+#     shuffle=True,
+#     num_workers=4,
+#     pin_memory=False,
+# )
+# # push set
+# train_push_dataset = datasets.ImageFolder(
+#     train_push_dir,
+#     transforms.Compose(
+#         [
+#             transforms.Resize(size=(img_size, img_size)),
+#             transforms.ToTensor(),
+#         ]
+#     ),
+# )
+# train_push_loader = torch.utils.data.DataLoader(
+#     train_push_dataset,
+#     batch_size=train_push_batch_size,
+#     shuffle=False,
+#     num_workers=4,
+#     pin_memory=False,
+# )
+# # test set
+# test_dataset = datasets.ImageFolder(
+#     test_dir,
+#     transforms.Compose(
+#         [
+#             transforms.Resize(size=(img_size, img_size)),
+#             transforms.ToTensor(),
+#             normalize,
+#         ]
+#     ),
+# )
+# test_loader = torch.utils.data.DataLoader(
+#     test_dataset,
+#     batch_size=test_batch_size,
+#     shuffle=False,
+#     num_workers=4,
+#     pin_memory=False,
+# )
 
 # get the assigned the class labels
 labels = train_dataset.class_to_idx
