@@ -69,15 +69,14 @@ test_batch_size = 100
 img_size = 224
 train_push_batch_size = 80
 
-normalize = transforms.Normalize(mean=mean,
-                                 std=std)
-
+normalize = transforms.Normalize( mean=mean, std=std)
 data_csv_path = pd.read_csv(config.data_csv_path)
 
 train_dataset = ImageDataset(
     data_csv_path, train=True, test=False, transform= transforms.Compose([
         transforms.Resize(size=(img_size, img_size)),
         transforms.ToTensor(),
+        normalize,
     ])
 )
 
@@ -92,6 +91,7 @@ test_dataset = ImageDataset(
     data_csv_path, train=False, test=True, transform= transforms.Compose([
         transforms.Resize(size=(img_size, img_size)),
         transforms.ToTensor(),
+        normalize,
     ])
 )
 # train data loader

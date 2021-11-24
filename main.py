@@ -1,19 +1,22 @@
-import copy
+import argparse
+import os
+import re
+import shutil
 
+import pandas as pd
+import torch.utils.data
+# import torch.utils.data.distributed
+import torchvision.transforms as transforms
+from torch.utils.data import DataLoader
+
+import model
+import push
+import save
+import train_and_test as tnt
+from helpers import makedir
+from log import create_logger
 from make_dataset import ImageDataset
-from settings import num_train_epochs, num_warm_epochs, push_start, push_epochs
-from settings import coefs
-from settings import last_layer_optimizer_lr
-from settings import warm_optimizer_lrs
-from settings import joint_optimizer_lrs, joint_lr_step_size
-from settings import (
-    train_dir,
-    test_dir,
-    train_push_dir,
-    train_batch_size,
-    test_batch_size,
-    train_push_batch_size,
-)
+from preprocess import mean, std, preprocess_input_function
 from settings import (
     base_architecture,
     img_size,
@@ -24,29 +27,15 @@ from settings import (
     add_on_layers_type,
     experiment_run,
 )
-import os
-import shutil
-
-import torch
-import torch.utils.data
-from torch.utils.data import DataLoader
-import pandas as pd
-
-# import torch.utils.data.distributed
-import torchvision.transforms as transforms
-import torchvision.datasets as datasets
-
-import argparse
-import re
-
-from helpers import makedir
-import model
-import push
-import prune
-import train_and_test as tnt
-import save
-from log import create_logger
-from preprocess import mean, std, preprocess_input_function
+from settings import coefs
+from settings import joint_optimizer_lrs, joint_lr_step_size
+from settings import last_layer_optimizer_lr
+from settings import num_train_epochs, num_warm_epochs, push_start, push_epochs
+from settings import (
+    train_batch_size,
+    test_batch_size,
+)
+from settings import warm_optimizer_lrs
 
 parser = argparse.ArgumentParser()
 # python3 main.py -gpuid=0,1,2,3
@@ -87,6 +76,7 @@ train_dataset = ImageDataset(
     data_csv_path, train=True, test=False, transform= transforms.Compose([
         transforms.Resize(size=(img_size, img_size)),
         transforms.ToTensor(),
+        normalize,
     ])
 )
 
@@ -101,6 +91,7 @@ test_dataset = ImageDataset(
     data_csv_path, train=False, test=True, transform= transforms.Compose([
         transforms.Resize(size=(img_size, img_size)),
         transforms.ToTensor(),
+        normalize,
     ])
 )
 # train data loader
@@ -129,6 +120,7 @@ test_loader = DataLoader(
     num_workers=4,
     pin_memory=False
 )
+
 # all datasets
 # train set
 # train_dataset = datasets.ImageFolder(
@@ -189,6 +181,7 @@ labels = train_dataset.class_to_idx
 print("Class labels : ", labels)
 
 # we should look into distributed sampler more carefully at torch.utils.data.distributed.DistributedSampler(train_dataset)
+
 log("training set size: {0}".format(len(train_loader.dataset)))
 log("push set size: {0}".format(len(train_push_loader.dataset)))
 log("test set size: {0}".format(len(test_loader.dataset)))

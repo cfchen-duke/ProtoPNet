@@ -97,6 +97,7 @@ if check_test_accu:
         train_csv, train=False, test=True, transform=transforms.Compose([
             transforms.Resize(size=(img_size, img_size)),
             transforms.ToTensor(),
+            normalize,
         ])
     )
     test_loader = DataLoader(
