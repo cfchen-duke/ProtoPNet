@@ -8,7 +8,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 from PIL import Image
+from torch.utils.data import DataLoader
 
+from make_dataset import ImageDataset
 import re
 
 import os
@@ -21,7 +23,7 @@ import train_and_test as tnt
 import save
 from log import create_logger
 from preprocess import mean, std, preprocess_input_function, undo_preprocess_input_function
-
+from settings import data_csv_path
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -90,16 +92,29 @@ from settings import test_dir
 if check_test_accu:
     test_batch_size = 100
 
-    test_dataset = datasets.ImageFolder(
-        test_dir,
-        transforms.Compose([
+    test_dataset = ImageDataset(
+        data_csv_path, train=False, test=True, transform=transforms.Compose([
             transforms.Resize(size=(img_size, img_size)),
             transforms.ToTensor(),
-            normalize,
-        ]))
-    test_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=test_batch_size, shuffle=True,
-        num_workers=4, pin_memory=False)
+        ])
+    )
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=test_batch_size,
+        shuffle=True,
+        num_workers=4,
+        pin_memory=False
+    )
+    # test_dataset = datasets.ImageFolder(
+    #     test_dir,
+    #     transforms.Compose([
+    #         transforms.Resize(size=(img_size, img_size)),
+    #         transforms.ToTensor(),
+    #         normalize,
+    #     ]))
+    # test_loader = torch.utils.data.DataLoader(
+    #     test_dataset, batch_size=test_batch_size, shuffle=True,
+    #     num_workers=4, pin_memory=False)
     log('test set size: {0}'.format(len(test_loader.dataset)))
 
     accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
