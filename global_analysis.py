@@ -8,7 +8,7 @@ import cv2
 import matplotlib.pyplot as plt
 from make_dataset import ImageDataset
 from torch.utils.data import DataLoader
-
+import pandas as pd
 import re
 
 import os
@@ -17,7 +17,6 @@ from helpers import makedir
 import model
 import find_nearest
 import train_and_test as tnt
-
 from preprocess import preprocess_input_function
 
 import argparse
@@ -51,7 +50,7 @@ img_size = ppnet_multi.module.img_size
 from settings import train_push_dir, test_dir
 
 train_dir = train_push_dir
-train_csv = config.data_csv_path
+train_csv = pd.read_csv(config.data_csv_path)
 batch_size = 100
 
 train_dataset = ImageDataset(
@@ -60,6 +59,7 @@ train_dataset = ImageDataset(
         transforms.ToTensor(),
     ])
 )
+
 # test dataset
 test_dataset = ImageDataset(
     train_csv, train=False, test=True, transform= transforms.Compose([
@@ -67,6 +67,7 @@ test_dataset = ImageDataset(
         transforms.ToTensor(),
     ])
 )
+
 # train data loader
 train_loader = DataLoader(
     train_dataset,
@@ -75,6 +76,7 @@ train_loader = DataLoader(
     num_workers=4,
     pin_memory=False
 )
+
 # test data loader
 test_loader = DataLoader(
     test_dataset,
@@ -83,6 +85,7 @@ test_loader = DataLoader(
     num_workers=4,
     pin_memory=False
 )
+
 # train set: do not normalize
 # train_dataset = datasets.ImageFolder(
 #     train_dir,
