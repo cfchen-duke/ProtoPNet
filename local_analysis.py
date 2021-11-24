@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import cv2
 from PIL import Image
 from torch.utils.data import DataLoader
-
+import pandas as pd
 from make_dataset import ImageDataset
 import re
 
@@ -87,13 +87,14 @@ class_specific = True
 normalize = transforms.Normalize(mean=mean,
                                  std=std)
 
+train_csv = pd.read_csv(data_csv_path)
 # load the test data and check test accuracy
 from settings import test_dir
 if check_test_accu:
     test_batch_size = 100
 
     test_dataset = ImageDataset(
-        data_csv_path, train=False, test=True, transform=transforms.Compose([
+        train_csv, train=False, test=True, transform=transforms.Compose([
             transforms.Resize(size=(img_size, img_size)),
             transforms.ToTensor(),
         ])

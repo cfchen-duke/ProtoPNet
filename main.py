@@ -30,7 +30,7 @@ import shutil
 import torch
 import torch.utils.data
 from torch.utils.data import DataLoader
-
+import pandas as pd
 
 # import torch.utils.data.distributed
 import torchvision.transforms as transforms
@@ -81,6 +81,7 @@ proto_bound_boxes_filename_prefix = "bb"
 # load the data
 
 normalize = transforms.Normalize(mean=mean, std=std)
+data_csv_path = pd.read_csv(data_csv_path)
 
 train_dataset = ImageDataset(
     data_csv_path, train=True, test=False, transform= transforms.Compose([
@@ -97,7 +98,7 @@ train_push_dataset = ImageDataset(
 )
 # test dataset
 test_dataset = ImageDataset(
-    data_csv_path, train=False, test=False, transform= transforms.Compose([
+    data_csv_path, train=False, test=True, transform= transforms.Compose([
         transforms.Resize(size=(img_size, img_size)),
         transforms.ToTensor(),
     ])
