@@ -8,14 +8,14 @@ from sklearn.metrics import accuracy_score, recall_score, f1_score, precision_sc
 
 
 def _train_or_test(
-    model,
-    dataloader,
-    labels,
-    optimizer=None,
-    class_specific=True,
-    use_l1_mask=True,
-    coefs=None,
-    log=print,
+        model,
+        dataloader,
+        labels,
+        optimizer=None,
+        class_specific=True,
+        use_l1_mask=True,
+        coefs=None,
+        log=print,
 ):
     """
     model: the multi-gpu model
@@ -37,7 +37,10 @@ def _train_or_test(
     total_separation_cost = 0
     total_avg_separation_cost = 0
 
-    for i, (image, label) in enumerate(dataloader):
+    for i, j in enumerate(dataloader):
+        print (i)
+        image = j.get('image')
+        label = j.get('label')
         input = image.cuda()
         target = label.cuda()
 
@@ -53,9 +56,9 @@ def _train_or_test(
 
             if class_specific:
                 max_dist = (
-                    model.module.prototype_shape[1]
-                    * model.module.prototype_shape[2]
-                    * model.module.prototype_shape[3]
+                        model.module.prototype_shape[1]
+                        * model.module.prototype_shape[2]
+                        * model.module.prototype_shape[3]
                 )
 
                 # prototypes_of_correct_class is a tensor of shape batch_size * num_prototypes
@@ -116,24 +119,24 @@ def _train_or_test(
             if class_specific:
                 if coefs is not None:
                     loss = (
-                        coefs["crs_ent"] * cross_entropy
-                        + coefs["clst"] * cluster_cost
-                        + coefs["sep"] * separation_cost
-                        + coefs["l1"] * l1
+                            coefs["crs_ent"] * cross_entropy
+                            + coefs["clst"] * cluster_cost
+                            + coefs["sep"] * separation_cost
+                            + coefs["l1"] * l1
                     )
                 else:
                     loss = (
-                        cross_entropy
-                        + 0.8 * cluster_cost
-                        - 0.08 * separation_cost
-                        + 1e-4 * l1
+                            cross_entropy
+                            + 0.8 * cluster_cost
+                            - 0.08 * separation_cost
+                            + 1e-4 * l1
                     )
             else:
                 if coefs is not None:
                     loss = (
-                        coefs["crs_ent"] * cross_entropy
-                        + coefs["clst"] * cluster_cost
-                        + coefs["l1"] * l1
+                            coefs["crs_ent"] * cross_entropy
+                            + coefs["clst"] * cluster_cost
+                            + coefs["l1"] * l1
                     )
                 else:
                     loss = cross_entropy + 0.8 * cluster_cost + 1e-4 * l1
@@ -168,7 +171,7 @@ def _train_or_test(
 
 
 def train(
-    model, dataloader, labels, optimizer, class_specific=False, coefs=None, log=print
+        model, dataloader, labels, optimizer, class_specific=False, coefs=None, log=print
 ):
     assert optimizer is not None
 
@@ -235,7 +238,7 @@ def joint(model, log=print):
 
 
 def get_performance(predictions, targets, labels):
-
+    print("predictions : ", predictions)
     label_keys = list(labels.values())
     label_keys.sort()
     class_metric = {}
@@ -254,3 +257,8 @@ def get_performance(predictions, targets, labels):
     class_metric["accuracy"] = accuracy
 
     return class_metric
+
+
+def get_featurewise_predictions(predictions, targets, labels):
+
+    return

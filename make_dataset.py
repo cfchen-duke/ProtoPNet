@@ -54,10 +54,11 @@ class ImageDataset(Dataset):
         # convert the image from BGR to RGB color format
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         # apply image transforms
-        # image = self.transform(image)
+        image = self.transform(image)
         targets = self.labels[index]
 
         return {
-            'image': torch.tensor(image, dtype=torch.float32),
+            # 'image': torch.tensor(image, dtype=torch.float32),
+            'image': image.clone().detach(),
             'label': torch.tensor(targets, dtype=torch.float32)
         }

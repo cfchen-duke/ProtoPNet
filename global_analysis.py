@@ -55,6 +55,7 @@ batch_size = 100
 
 train_dataset = ImageDataset(
     train_csv, train=True, test=False, transform= transforms.Compose([
+        transforms.ToPILImage(),
         transforms.Resize(size=(img_size, img_size)),
         transforms.ToTensor(),
     ])
@@ -63,6 +64,7 @@ train_dataset = ImageDataset(
 # test dataset
 test_dataset = ImageDataset(
     train_csv, train=False, test=True, transform= transforms.Compose([
+        transforms.ToPILImage(),
         transforms.Resize(size=(img_size, img_size)),
         transforms.ToTensor(),
     ])
@@ -73,7 +75,7 @@ train_loader = DataLoader(
     train_dataset,
     batch_size=batch_size,
     shuffle=True,
-    num_workers=4,
+    num_workers=2,
     pin_memory=False
 )
 
@@ -82,7 +84,7 @@ test_loader = DataLoader(
     test_dataset,
     batch_size=batch_size,
     shuffle=True,
-    num_workers=4,
+    num_workers=2,
     pin_memory=False
 )
 

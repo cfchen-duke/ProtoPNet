@@ -74,6 +74,7 @@ data_csv_path = pd.read_csv(config.data_csv_path)
 
 train_dataset = ImageDataset(
     data_csv_path, train=True, test=False, transform= transforms.Compose([
+        transforms.ToPILImage(),
         transforms.Resize(size=(img_size, img_size)),
         transforms.ToTensor(),
         normalize,
@@ -82,6 +83,7 @@ train_dataset = ImageDataset(
 
 train_push_dataset = ImageDataset(
     data_csv_path, train=True, test=False, transform= transforms.Compose([
+        transforms.ToPILImage(),
         transforms.Resize(size=(img_size, img_size)),
         transforms.ToTensor(),
     ])
@@ -89,6 +91,7 @@ train_push_dataset = ImageDataset(
 # test dataset
 test_dataset = ImageDataset(
     data_csv_path, train=False, test=True, transform= transforms.Compose([
+        transforms.ToPILImage(),
         transforms.Resize(size=(img_size, img_size)),
         transforms.ToTensor(),
         normalize,
@@ -99,7 +102,7 @@ train_loader = DataLoader(
     train_dataset,
     batch_size=train_batch_size,
     shuffle=True,
-    num_workers=4,
+    num_workers=2,
     pin_memory=False
 )
 
@@ -108,7 +111,7 @@ train_push_loader = DataLoader(
     train_dataset,
     batch_size=train_batch_size,
     shuffle=False,
-    num_workers=4,
+    num_workers=2,
     pin_memory=False
 )
 
@@ -117,7 +120,7 @@ test_loader = DataLoader(
     test_dataset,
     batch_size=test_batch_size,
     shuffle=False,
-    num_workers=4,
+    num_workers=2,
     pin_memory=False
 )
 # train set
