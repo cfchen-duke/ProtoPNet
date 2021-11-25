@@ -17,9 +17,9 @@ feat = {
 sub_feat = {
     'bwv': ['absent', 'present'],
     'dag': ['absent', 'irregular', 'regular'],
-    'pig': ['absent', 'irregular', 'regular'],
+    'pig': ['absent', 'diffuse irregular', 'localized regular', 'localized irregular', 'diffuse regular'],
     'pn': ['absent', 'atypical', 'typical'],
-    'rs': ['absent', 'present'],
+    'rs': ['absent', 'blue areas', 'white areas', 'combinations'],
     'str': ['absent', 'irregular', 'regular']
 }
 
@@ -30,6 +30,12 @@ def create_csv(feat, sub_feat, new_df):
         for kk, vv in sub_feat.items():
             if k == kk:
                 for i in vv:
+                    if i == 'diffuse irregular' or i == 'localized irregular':
+                        i = 'irregular'
+                    if i == 'diffuse regular' or i == 'localized regular':
+                        i = 'regular'
+                    if i == 'blue areas' or i == 'white areas' or i == 'combinations':
+                        i = 'present'
                     col = k + '_' + i
                     new_df[col] = 0
 
@@ -40,6 +46,12 @@ def create_csv(feat, sub_feat, new_df):
                 if k == kk:
                     for i in vv:
                         if df.at[index, v] == i:
+                            if i == 'diffuse irregular' or i == 'localized irregular':
+                                i = 'irregular'
+                            if i == 'diffuse regular' or i == 'localized regular':
+                                i = 'regular'
+                            if i == 'blue areas' or i == 'white areas' or i == 'combinations':
+                                i = 'present'
                             new_df.at[index, kk + '_' + i] = 1
 
     pd.set_option("display.max_rows", None, "display.max_columns", None)
@@ -51,15 +63,15 @@ def create_dataset():
     from_dir = '../derm7pt/images/'
     to_dir = '../images/'
     df = pd.read_csv("one_hot_dataset.csv")
-    c=0
+    c = 0
     for root, _, files in os.walk(from_dir):
         for file in files:
             if file in df.img.unique():
-                c+=1
-                from_d = os.path.join(root,file)
+                c += 1
+                from_d = os.path.join(root, file)
                 to_d = os.path.join(to_dir, file)
-                shutil.copy2(from_d,to_d)
+                shutil.copy2(from_d, to_d)
     print(c)
 
 
-create_dataset()
+create_csv(feat, sub_feat, new_df)
