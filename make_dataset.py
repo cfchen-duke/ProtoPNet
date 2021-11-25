@@ -19,8 +19,8 @@ class ImageDataset(Dataset):
         self.train_ratio = int(0.8 * len(self.csv))
         self.test_ratio = len(self.csv) - self.train_ratio
         self.label_names = csv.keys()[1::]
-        self.class_to_idx = {self.label_names[i]:i+1 for i in range (len(self.label_names))}
-        self.idx_to_class = {i+1:self.label_names[i] for i in range (len(self.label_names))}
+        self.class_to_idx = {self.label_names[i]:i for i in range (len(self.label_names))}
+        self.idx_to_class = {i:self.label_names[i] for i in range (len(self.label_names))}
         # set the training data images and labels
         if self.train:
             print(f"Number of training images: {self.train_ratio}")
