@@ -50,6 +50,7 @@ def _train_or_test(
             # nn.Module has implemented __call__() function
             # so no need to call .forward
             output, min_distances = model(input)
+            min_distances = min_distances.cpu()
 
             # compute loss
             cross_entropy = torch.nn.functional.binary_cross_entropy(output, target)
@@ -69,7 +70,7 @@ def _train_or_test(
                 # ).cuda()
 
                 prototype_class_identity = model.module.prototype_class_identity
-                t_prototype_class_identity = torch.t(prototype_class_identity)
+                t_prototype_class_identity = torch.t(prototype_class_identity).cuda()
                 prototypes_of_correct_class = []
                 prototypes_of_correct_class_min_distances = []
 
@@ -93,8 +94,7 @@ def _train_or_test(
                         )
                         i_prototypes_of_correct_class_min_distances.append(max_dist - inverted_distance)
 
-                    prototypes_of_correct_class_min_distances.append(torch.tensor(
-                        i_prototypes_of_correct_class_min_distances))
+                    prototypes_of_correct_class_min_distances.append(i_prototypes_of_correct_class_min_distances)
 
                 prototypes_of_correct_class_min_distances = torch.tensor(prototypes_of_correct_class_min_distances)
 
