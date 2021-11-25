@@ -2,9 +2,10 @@ base_architecture = 'resnet152'
 img_size = 224
 num_prototypes = 4
 num_classes = 16
-prototype_shape = (num_prototypes*num_classes, 128, 1, 1)
-prototype_activation_function = 'log'
-add_on_layers_type = 'regular'
+prototype_shape = (num_prototypes * num_classes, 128, 1, 1)
+top_k_percentage = 10
+prototype_activation_function = "log"
+add_on_layers_type = "regular"
 
 experiment_run = '003'
 
