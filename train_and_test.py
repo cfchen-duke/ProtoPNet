@@ -2,7 +2,7 @@ import time
 import torch
 
 from helpers import list_of_distances, make_one_hot
-
+from settings import num_prototypes
 # Evaluation metrics
 from sklearn.metrics import accuracy_score, recall_score, f1_score, precision_score
 
@@ -62,14 +62,45 @@ def _train_or_test(
                 )
 
                 # prototypes_of_correct_class is a tensor of shape batch_size * num_prototypes
+
                 # calculate cluster cost
-                prototypes_of_correct_class = torch.t(
-                    model.module.prototype_class_identity[:, label]
-                ).cuda()
-                inverted_distances, _ = torch.max(
-                    (max_dist - min_distances) * prototypes_of_correct_class, dim=1
-                )
-                cluster_cost = torch.mean(max_dist - inverted_distances)
+                # prototypes_of_correct_class = torch.t(
+                #     model.module.prototype_class_identity[:, label]
+                # ).cuda()
+
+                prototype_class_identity = model.module.prototype_class_identity
+                t_prototype_class_identity = torch.t(prototype_class_identity)
+                prototypes_of_correct_class = []
+                prototypes_of_correct_class_min_distances = []
+
+                for i in range(label.size()[0]):
+
+                    i_label = label[i]
+                    i_min_distances = min_distances[i]
+
+                    indices = ((i_label == 1).nonzero(as_tuple=True)[0])
+                    i_prototypes_of_correct_class = t_prototype_class_identity[indices]
+                    i_prototypes_of_correct_class = torch.sum(i_prototypes_of_correct_class, axis=0)
+
+                    prototypes_of_correct_class.append(i_prototypes_of_correct_class)
+
+                    i_prototypes_of_correct_class_min_distances = []
+
+                    # enforce the model to have atleast one similar prototype
+                    for index in indices:
+                        inverted_distance = torch.max(
+                            (max_dist - i_min_distances) * t_prototype_class_identity[index]
+                        )
+                        i_prototypes_of_correct_class_min_distances.append(max_dist - inverted_distance)
+
+                    prototypes_of_correct_class_min_distances.append(torch.tensor(
+                        i_prototypes_of_correct_class_min_distances))
+
+                prototypes_of_correct_class_min_distances = torch.tensor(prototypes_of_correct_class_min_distances)
+
+                cluster_cost = torch.mean(prototypes_of_correct_class_min_distances)
+
+                prototypes_of_correct_class = torch.stack(prototypes_of_correct_class, dim=0).cuda()
 
                 # calculate separation cost
                 prototypes_of_wrong_class = 1 - prototypes_of_correct_class
@@ -80,7 +111,7 @@ def _train_or_test(
                     max_dist - inverted_distances_to_nontarget_prototypes
                 )
 
-                # calculate avg cluster cost
+                # calculate avg separation cost
                 avg_separation_cost = torch.sum(
                     min_distances * prototypes_of_wrong_class, dim=1
                 ) / torch.sum(prototypes_of_wrong_class, dim=1)
@@ -244,9 +275,11 @@ def get_performance(predictions, targets, labels):
     class_metric = {}
 
     accuracy = accuracy_score(targets, predictions)
-    precision = list(precision_score(targets, predictions, label_keys, average=None))
-    recall = list(recall_score(targets, predictions, label_keys, average=None))
-    f1 = list(f1_score(targets, predictions, label_keys, average=None))
+    precision = list(
+        precision_score(targets, predictions, labels=label_keys, average=None)
+    )
+    recall = list(recall_score(targets, predictions, labels=label_keys, average=None))
+    f1 = list(f1_score(targets, predictions, labels=label_keys, average=None))
 
     for label in labels.keys():
         class_metric[label] = {
