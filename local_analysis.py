@@ -95,6 +95,7 @@ if check_test_accu:
 
     test_dataset = ImageDataset(
         train_csv, train=False, test=True, transform=transforms.Compose([
+            transforms.ToPILImage(),
             transforms.Resize(size=(img_size, img_size)),
             transforms.ToTensor(),
             normalize,
@@ -104,7 +105,7 @@ if check_test_accu:
         test_dataset,
         batch_size=test_batch_size,
         shuffle=True,
-        num_workers=4,
+        num_workers=2,
         pin_memory=False
     )
     # test_dataset = datasets.ImageFolder(

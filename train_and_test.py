@@ -37,7 +37,10 @@ def _train_or_test(
     total_separation_cost = 0
     total_avg_separation_cost = 0
 
-    for i, (image, label) in enumerate(dataloader):
+    for i, j in enumerate(dataloader):
+        print (i)
+        image = j.get('image')
+        label = j.get('label')
         input = image.cuda()
         target = label.cuda()
 
