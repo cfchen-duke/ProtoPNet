@@ -70,7 +70,7 @@ def _train_or_test(
                 # ).cuda()
 
                 prototype_class_identity = model.module.prototype_class_identity
-                t_prototype_class_identity = torch.t(prototype_class_identity).cuda()
+                t_prototype_class_identity = torch.t(prototype_class_identity)
                 prototypes_of_correct_class = []
                 prototypes_of_correct_class_min_distances = []
 
@@ -100,7 +100,7 @@ def _train_or_test(
 
                 cluster_cost = torch.mean(prototypes_of_correct_class_min_distances)
 
-                prototypes_of_correct_class = torch.stack(prototypes_of_correct_class, dim=0).cuda()
+                prototypes_of_correct_class = torch.stack(prototypes_of_correct_class, dim=0)
 
                 # calculate separation cost
                 prototypes_of_wrong_class = 1 - prototypes_of_correct_class
