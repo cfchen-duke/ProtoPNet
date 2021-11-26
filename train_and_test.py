@@ -117,16 +117,16 @@ def _train_or_test(
                 ) / torch.sum(prototypes_of_wrong_class, dim=1)
                 avg_separation_cost = torch.mean(avg_separation_cost)
 
-                if use_l1_mask:
-                    l1_mask = 1 - torch.t(model.module.prototype_class_identity).cuda()
-                    l1 = (model.module.last_layer.weight * l1_mask).norm(p=1)
-                else:
-                    l1 = model.module.last_layer.weight.norm(p=1)
+                # if use_l1_mask:
+                #     l1_mask = 1 - torch.t(model.module.prototype_class_identity).cuda()
+                #     l1 = (model.module.last_layer.weight * l1_mask).norm(p=1)
+                # else:
+                #     l1 = model.module.last_layer.weight.norm(p=1)
 
             else:
                 min_distance, _ = torch.min(min_distances, dim=1)
                 cluster_cost = torch.mean(min_distance)
-                l1 = model.module.last_layer.weight.norm(p=1)
+                # l1 = model.module.last_layer.weight.norm(p=1)
 
             # evaluation statistics
             _, predicted = torch.max(output.data, 1)
@@ -153,24 +153,25 @@ def _train_or_test(
                             coefs["crs_ent"] * cross_entropy
                             + coefs["clst"] * cluster_cost
                             + coefs["sep"] * separation_cost
-                            + coefs["l1"] * l1
+                            # + coefs["l1"] * l1
                     )
                 else:
                     loss = (
                             cross_entropy
                             + 0.8 * cluster_cost
                             - 0.08 * separation_cost
-                            + 1e-4 * l1
+                            # + 1e-4 * l1
                     )
             else:
                 if coefs is not None:
                     loss = (
                             coefs["crs_ent"] * cross_entropy
                             + coefs["clst"] * cluster_cost
-                            + coefs["l1"] * l1
+                            # + coefs["l1"] * l1
                     )
                 else:
-                    loss = cross_entropy + 0.8 * cluster_cost + 1e-4 * l1
+                    # loss = cross_entropy + 0.8 * cluster_cost + 1e-4 * l1
+                    loss = cross_entropy + 0.8 * cluster_cost
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
