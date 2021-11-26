@@ -263,7 +263,9 @@ class PPNet(nn.Module):
 
         prototype_activations = self.distance_2_similarity(min_distances)
         logits = self.last_layer(prototype_activations)
-        return logits, min_distances
+        sig_layer = nn.Sigmoid()
+        output = sig_layer(logits)
+        return output, min_distances
 
     def push_forward(self, x):
         """this method is needed for the pushing operation"""
