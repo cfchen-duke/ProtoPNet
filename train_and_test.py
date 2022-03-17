@@ -1,6 +1,6 @@
 import time
 import torch
-
+from tqdm import tqdm
 from helpers import list_of_distances, make_one_hot
 
 def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l1_mask=True,
@@ -21,7 +21,7 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
     total_separation_cost = 0
     total_avg_separation_cost = 0
 
-    for i, (image, label) in enumerate(dataloader):
+    for i, (image, label) in enumerate(tqdm(dataloader)):
         input = image.cuda()
         target = label.cuda()
 
@@ -31,7 +31,12 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
             # nn.Module has implemented __call__() function
             # so no need to call .forward
             output, min_distances = model(input)
-
+            
+            # if i%10==0:
+            #     probs = torch.softmax(output, dim=1)
+            #     with open('/media/si-lab/63bc1baf-d08c-4db5-b271-e462f3f4444d/a_e_g/ppnet_originale_originale/ProtoPNet/ag_probs_softmax.txt','a') as outfile:
+            #         outfile.write(str(probs)+'\n')
+                    
             # compute loss
             cross_entropy = torch.nn.functional.cross_entropy(output, target)
 
