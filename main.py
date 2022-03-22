@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 
 import torch
 import torch.utils.data
@@ -32,6 +33,7 @@ def set_seed(seed):
 
 
 def main():
+    start = time.time()
     set_seed(seed=1)
     parser = argparse.ArgumentParser()
     parser.add_argument('-gpuid', nargs=1, type=str, default='0') #TODO
@@ -42,7 +44,8 @@ def main():
     
     # book keeping namings and code
     from settings import base_architecture, img_size, prototype_shape, num_classes, \
-                         prototype_activation_function, add_on_layers_type, experiment_run
+                         prototype_activation_function, add_on_layers_type, experiment_run, \
+                             num_prots_per_class, num_filters
     
     base_architecture_type = re.match('^[a-z]*', base_architecture).group(0)
     
@@ -204,6 +207,19 @@ def main():
                                                 target_accu=0.70, log=log)
        
     logclose()
+    stop = time.time()
+    
+    run_time = np.round((stop - start) / 60, decimals=1)
+    coeff_crs_ent = coefs['crs_ent']
+    coeff_clst = coefs['clst']
+    coeff_sep = coefs['sep']
+    
+    
+    
+    with open('./saved_models/experiments_setup.txt', 'a') as out_file:
+        out_file.write(f'{experiment_run},{base_architecture},{img_size},{num_classes},\
+                       {num_prots_per_class},{num_filters},{train_batch_size},{test_batch_size},\
+                           {train_push_batch_size},{coeff_crs_ent},{coeff_clst},{coeff_sep},{num_warm_epochs},{num_train_epochs},{run_time}\n')
     
 if __name__ == '__main__':
     main()
