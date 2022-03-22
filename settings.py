@@ -3,13 +3,14 @@ base_architecture = 'resnet50'
 #base_architecture = 'densenet121'
 
 
-img_size = 224 #336
-prototype_shape = (30, 512, 1, 1) #40 #60 #16 #40
+img_size = 124# 224 #336
 num_classes = 2 
+num_prots_per_class = 10
+prototype_shape = (num_classes*num_prots_per_class, 256, 1, 1) #40 #60 #16 #40
 prototype_activation_function = 'log'
 add_on_layers_type = 'regular'
 
-experiment_run = '02_breastCBIS_mass_bm_224IMGSIZE_15PROTPERCLASS_512FILTERS'
+experiment_run = '1_ADNI_124IMGSIZE_10PROTPERCLASS_256FILTERS'
 
 data_path = './datasets/' #
 train_dir = data_path + 'push_augmented/' #
@@ -31,8 +32,8 @@ last_layer_optimizer_lr = 1e-4
 
 coefs = {
     'crs_ent': 1,
-    'clst': 0.95, #0.95
-    'sep': -0.08, #0.05
+    'clst': 0.95, #0.8
+    'sep': -0.08, #-0.08
     'l1': 1e-4,
 }
 
