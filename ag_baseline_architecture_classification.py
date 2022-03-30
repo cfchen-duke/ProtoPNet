@@ -22,13 +22,15 @@ import os
 import copy
 from tqdm import tqdm
 from time import gmtime,strftime
-from settings import train_dir, test_dir,img_size, num_classes,\
-                     train_batch_size, test_batch_size, num_train_epochs
+from settings import train_dir, test_dir,img_size, num_classes, num_train_epochs \
+                     # train_batch_size, test_batch_size
 from preprocess import mean, std, preprocess_input_function
 
 # from sklearn.metrics import confusion_matrix
 # import seaborn as sn
 # import pandas as pd
+
+
 
 num_epochs = num_train_epochs
 
@@ -47,11 +49,12 @@ set_seed(seed=1)
 
 # lr = [1e-3, 1e-4, 1e-5, 1e-6]
 lr = [1e-4, 1e-5, 1e-6]
-
 # lr = [5e-2, 1e-2, 5e-3, 1e-3, 5e-4, 1e-4]     #TODO
 # wd = [1e-1, 1e-2, 0]
 wd = [1e-3, 0]
 dropout_rate = [999]
+batch_size = [25, 30, 40]
+
 # joint_lr_step_size = [2, 5, 10]
 # gamma_value = [0.10, 0.50, 0.25]
 
@@ -66,10 +69,8 @@ def get_N_HyperparamsConfigs(N=0, lr=lr, wd=wd, dropout_rate=dropout_rate):
     for i in lr:
         for j in wd:
             for k in dropout_rate:
-            # for k in joint_lr_step_size:
-            #     for l in gamma_value:
-                    #configurations[f'config_{h}'] = [i, j, k, l]
-                    configurations[f'config_{h}'] = [i, j, k]
+                for l in batch_size:
+                    configurations[f'config_{h}'] = [i, j, k, l]
                     h += 1
     
                      
@@ -284,6 +285,9 @@ for model_name in ['resnet50']:
         lr = config[0]
         wd = config[1]
         dropout_rate = config[2]
+        batch_size = config[3]
+        train_batch_size = batch_size
+        test_batch_size = batch_size
         
         # joint_lr_step_size = config[2]
         # gamma_value = config[3]
@@ -390,7 +394,7 @@ for model_name in ['resnet50']:
 
         # with open(f'./saved_models_baseline/{model_name}/experiments_setup_massCalcification.txt', 'a') as out_file: #TODO ricordati di cambiare il nome del txt se cambia esperimento
             # out_file.write(f'{experiment_run},{lr},{wd},{joint_lr_step_size},{gamma_value},{img_size},{num_classes},{train_batch_size},{test_batch_size},{num_train_epochs},{best_accuracy}\n')
-            out_file.write(f'{experiment_run},{lr},{wd},{dropout_rate},{best_accuracy}\n')
+            out_file.write(f'{experiment_run},{lr},{wd},{dropout_rate},{batch_size},{best_accuracy}\n')
 
         
         
@@ -404,7 +408,7 @@ for model_name in ['resnet50']:
         plt.plot(x_axis,val_accs_npy,'*-b',label='Validation')
         # plt.ylim(bottom=0.5,top=1)
         plt.legend()
-        plt.title(f'Model: {model_name}\nLR: {lr}, WD: {wd}, dropout: {dropout_rate}, best validation accuracy: {best_accuracy}')
+        plt.title(f'Model: {model_name}\nLR: {lr}, WD: {wd}, dropout: {dropout_rate},\nbest validation accuracy: {np.round(best_accuracy,decimals=2)}, batch size: {batch_size}')
         plt.xlabel('Epochs')
         plt.ylabel('Accuracy')
         plt.grid()
@@ -420,7 +424,7 @@ for model_name in ['resnet50']:
         plt.plot(x_axis,val_loss,'*-b',label='Validation')
         # plt.ylim(bottom=-0.5)
         plt.legend()
-        plt.title(f'Model: {model_name}\nLR: {lr}, WD: {wd}, dropout: {dropout_rate}')
+        plt.title(f'Model: {model_name}\nLR: {lr}, WD: {wd}, dropout: {dropout_rate}, batch size: {batch_size}')
         plt.xlabel('Epochs')
         plt.ylabel('Loss')
         plt.grid()
