@@ -28,7 +28,13 @@ base_architecture_to_features = {'resnet18': resnet18_features,
                                  'vgg19': vgg19_features,
                                  'vgg19_bn': vgg19_bn_features}
 
-class PPNet(nn.Module):
+
+#
+dropout_proportion = 0.4
+#
+
+
+class PPNet(nn.Module):    
 
     def __init__(self, features, img_size, prototype_shape,
                  proto_layer_rf_info, num_classes, init_weights=True,
@@ -75,20 +81,37 @@ class PPNet(nn.Module):
         else:
             raise Exception('other base base_architecture NOT implemented')
 
+        #
+        self.current_in_channels = first_add_on_layer_in_channels
+        #
         if add_on_layers_type == 'bottleneck':
             add_on_layers = []
             current_in_channels = first_add_on_layer_in_channels
+           
+            
             while (current_in_channels > self.prototype_shape[1]) or (len(add_on_layers) == 0):
                 current_out_channels = max(self.prototype_shape[1], (current_in_channels // 2))
                 add_on_layers.append(nn.Conv2d(in_channels=current_in_channels,
-                                               out_channels=current_out_channels,
-                                               kernel_size=1))
+                                                out_channels=current_out_channels,
+                                                kernel_size=1))
+                ## TODO versione nostra con aggiunta dei Dropout
+                add_on_layers.append(nn.Dropout(p=dropout_proportion))
+
                 add_on_layers.append(nn.ReLU())
                 add_on_layers.append(nn.Conv2d(in_channels=current_out_channels,
-                                               out_channels=current_out_channels,
-                                               kernel_size=1))
+                                                out_channels=current_out_channels,
+                                                kernel_size=1))
+                
+               
+                
                 if current_out_channels > self.prototype_shape[1]:
+                    # add_on_layers.append(nn.ReLU()) #original version
+                    
+                    ## TODO versione nostra con aggiunta dei Dropout
+                    add_on_layers.append(nn.Dropout(p=dropout_proportion))
                     add_on_layers.append(nn.ReLU())
+                    #
+                    
                 else:
                     assert(current_out_channels == self.prototype_shape[1])
                     add_on_layers.append(nn.Sigmoid())

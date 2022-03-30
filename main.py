@@ -69,6 +69,8 @@ def main():
     from settings import train_dir, test_dir, train_push_dir, \
                          train_batch_size, test_batch_size, train_push_batch_size
     
+    from model import dropout_proportion #TODO aggiunta noi questa variabile
+    
     normalize = transforms.Normalize(mean=mean,
                                      std=std)
     
@@ -122,6 +124,10 @@ def main():
                                   num_classes=num_classes,
                                   prototype_activation_function=prototype_activation_function,
                                   add_on_layers_type=add_on_layers_type)
+    
+    log('CURRENT INPUT CHANNELS: {0}'.format(ppnet.current_in_channels))  
+    
+    
     #if prototype_activation_function == 'linear':
     #    ppnet.set_last_layer_incorrect_connection(incorrect_strength=0)
     ppnet = ppnet.cuda()
@@ -217,9 +223,7 @@ def main():
     
     
     with open('./saved_models/experiments_setup.txt', 'a') as out_file:
-        out_file.write(f'{experiment_run},{base_architecture},{img_size},{num_classes},\
-                       {num_prots_per_class},{num_filters},{train_batch_size},{test_batch_size},\
-                           {train_push_batch_size},{coeff_crs_ent},{coeff_clst},{coeff_sep},{num_warm_epochs},{num_train_epochs},{run_time}\n')
+        out_file.write(f'{experiment_run},{base_architecture},{img_size},{num_classes},{num_prots_per_class},{num_filters},{train_batch_size},{test_batch_size},{train_push_batch_size},{coeff_crs_ent},{coeff_clst},{coeff_sep},{num_warm_epochs},{num_train_epochs},{dropout_proportion},{run_time}\n')
     
 if __name__ == '__main__':
     main()
