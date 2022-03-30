@@ -1,3 +1,4 @@
+experiment_task = 'CBIS_massBenignMalignant' #'ADNI' 
 # base_architecture = 'vgg19'
 base_architecture = 'resnet50'
 #base_architecture = 'densenet121'
@@ -44,4 +45,4 @@ push_start = 10
 push_epochs = [i for i in range(num_train_epochs) if i % 10 == 0]
 
 from time import gmtime,strftime
-experiment_run = f'ADNI_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}'
+experiment_run = f'{experiment_task}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}'
