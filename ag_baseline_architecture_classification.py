@@ -48,17 +48,19 @@ set_seed(seed=1)
 
 
 # lr = [1e-3, 1e-4, 1e-5, 1e-6]
-lr = [1e-4, 1e-5, 1e-6]
+# lr = [1e-5, 1e-6]
+lr = [1e-6]
+
 # lr = [5e-2, 1e-2, 5e-3, 1e-3, 5e-4, 1e-4]     #TODO
 # wd = [1e-1, 1e-2, 0]
-wd = [1e-3, 0]
-dropout_rate = [999]
-batch_size = [25, 30, 40]
+wd = [1e-3]
+dropout_rate = [0, 0.4, 0.7]
+batch_size = [40, 30]
 
 # joint_lr_step_size = [2, 5, 10]
 # gamma_value = [0.10, 0.50, 0.25]
 
-N = len(lr) * len(wd) * len(dropout_rate)
+N = len(lr) * len(wd) * len(dropout_rate) * len(batch_size)
 #* len(joint_lr_step_size) * len(gamma_value)
 
 # def get_N_HyperparamsConfigs(N=0, lr=lr, wd=wd, joint_lr_step_size=joint_lr_step_size,
@@ -203,11 +205,29 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use
     if model_name == "resnet50":
         """ Resnet50
         """
+        # model_ft = models.resnet50(pretrained=use_pretrained)
+        # set_parameter_requires_grad(model_ft, feature_extract)
+        # num_ftrs = model_ft.fc.in_features
+        # model_ft.fc = nn.Linear(num_ftrs, num_classes)
+        # input_size = img_size   
+        
         model_ft = models.resnet50(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
-        model_ft.fc = nn.Linear(num_ftrs, num_classes)
-        input_size = img_size   
+        model_ft.fc = nn.Sequential(
+
+            #Fully connected
+            nn.Linear(num_ftrs,4096),
+            nn.ReLU(),
+            
+            #Dropout
+            nn.Dropout(p=dropout_rate),
+            
+            # Classification layer
+            nn.Linear(4096, num_classes),
+            nn.Softmax()            
+            )
+        input_size = img_size  
     
     elif model_name == "vgg19":
         """ VGG19
@@ -235,15 +255,15 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use
 
 
 
-def append_dropout(model, rate):
-        for name, module in model.named_children():
-            if len(list(module.children())) > 0:
-                append_dropout(module,rate)
-            if isinstance(module, nn.ReLU):
-                # new = nn.Sequential(module, nn.Dropout2d(p=rate, inplace=True))
-                new = nn.Sequential(module, nn.Dropout(p=rate, inplace=True))
+# def append_dropout(model, rate):
+#         for name, module in model.named_children():
+#             if len(list(module.children())) > 0:
+#                 append_dropout(module,rate)
+#             if isinstance(module, nn.ReLU):
+#                 # new = nn.Sequential(module, nn.Dropout2d(p=rate, inplace=True))
+#                 new = nn.Sequential(module, nn.Dropout(p=rate, inplace=True))
 
-                setattr(model, name, new)
+#                 setattr(model, name, new)
 
 
 
@@ -280,7 +300,7 @@ for model_name in ['resnet50']:
 # for model_name in ['vgg19']:
 
     print(f'-------------MODEL: {model_name} ----------------------------')
-    for idx,config in enumerate(chosen_configurations):
+    for idx,config in enumerate(chosen_configurations[1:]): #TODO attento: abbiamo saltato la prima peche la aveamo già
         print(f'Starting config {idx}: {config}')
         lr = config[0]
         wd = config[1]
@@ -408,7 +428,8 @@ for model_name in ['resnet50']:
         plt.plot(x_axis,val_accs_npy,'*-b',label='Validation')
         # plt.ylim(bottom=0.5,top=1)
         plt.legend()
-        plt.title(f'Model: {model_name}\nLR: {lr}, WD: {wd}, dropout: {dropout_rate},\nbest validation accuracy: {np.round(best_accuracy,decimals=2)}, batch size: {batch_size}')
+        b_acc = best_accuracy.detach().cpu()
+        plt.title(f'Model: {model_name}\nLR: {lr}, WD: {wd}, dropout: {dropout_rate},\nbest validation accuracy: {np.round(b_acc,decimals=2)}, batch size: {batch_size}')
         plt.xlabel('Epochs')
         plt.ylabel('Accuracy')
         plt.grid()
