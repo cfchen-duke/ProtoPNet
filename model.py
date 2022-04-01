@@ -30,7 +30,7 @@ base_architecture_to_features = {'resnet18': resnet18_features,
 
 
 #
-dropout_proportion = 0.4
+dropout_proportion = 0
 #
 
 

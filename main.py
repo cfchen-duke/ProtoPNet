@@ -108,7 +108,7 @@ def main():
             normalize,
         ]))
     test_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=test_batch_size, shuffle=False,
+        test_dataset, batch_size=test_batch_size, shuffle=True, #TODO messo True, era falso
         num_workers=4, pin_memory=False)
     
     # we should look into distributed sampler more carefully at torch.utils.data.distributed.DistributedSampler(train_dataset)
@@ -180,7 +180,7 @@ def main():
         accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
                         class_specific=class_specific, log=log)
         save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'nopush', accu=accu,
-                                    target_accu=0.70, log=log)
+                                    target_accu=0.50, log=log)
     
         if epoch >= push_start and epoch in push_epochs:
             push.push_prototypes(
@@ -199,7 +199,7 @@ def main():
             accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
                             class_specific=class_specific, log=log)
             save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'push', accu=accu,
-                                        target_accu=0.70, log=log)
+                                        target_accu=0.50, log=log)
     
             if prototype_activation_function != 'linear':
                 tnt.last_only(model=ppnet_multi, log=log)
@@ -210,7 +210,7 @@ def main():
                     accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
                                     class_specific=class_specific, log=log)
                     save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + '_' + str(i) + 'push', accu=accu,
-                                                target_accu=0.70, log=log)
+                                                target_accu=0.50, log=log)
        
     logclose()
     stop = time.time()
