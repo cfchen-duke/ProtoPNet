@@ -108,5 +108,6 @@ saved_models/
 pretrained_models/
 datasets/
 previous_datasets/
+invettiva/
 other_datasets/
 saved_models_baseline/
