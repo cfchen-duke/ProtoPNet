@@ -49,12 +49,14 @@ set_seed(seed=1)
 
 # lr = [1e-3, 1e-4, 1e-5, 1e-6]
 # lr = [1e-5, 1e-6]
-lr = [1e-6]
+lr = [1e-5]
+#lr=[1e-6]
 
 # lr = [5e-2, 1e-2, 5e-3, 1e-3, 5e-4, 1e-4]     #TODO
 # wd = [1e-1, 1e-2, 0]
 wd = [1e-3]
-dropout_rate = [0, 0.4, 0.7]
+dropout_rate = [0, 0.2, 0.4]
+#dropout_rate=[0,0.4,0.7]
 batch_size = [40, 30]
 
 # joint_lr_step_size = [2, 5, 10]
@@ -300,7 +302,7 @@ for model_name in ['resnet50']:
 # for model_name in ['vgg19']:
 
     print(f'-------------MODEL: {model_name} ----------------------------')
-    for idx,config in enumerate(chosen_configurations[1:]): #TODO attento: abbiamo saltato la prima peche la aveamo già
+    for idx,config in enumerate(chosen_configurations): #TODO attento: abbiamo saltato la prima peche la aveamo già
         print(f'Starting config {idx}: {config}')
         lr = config[0]
         wd = config[1]
@@ -315,8 +317,8 @@ for model_name in ['resnet50']:
         # Models to choose from [resnet, alexnet, vgg, squeezenet, densenet, inception]
         # model_name = "resnet50"
         
-        experiment_run = f'CBIS_baseline_massBenignMalignant_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}'
-        # experiment_run = f'CBIS_baseline_massCalcification_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}' #TODO
+        #experiment_run = f'CBIS_baseline_massBenignMalignant_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}'
+        experiment_run = f'CBIS_baseline_massCalcification_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}' #TODO
 
         output_dir = f'./saved_models_baseline/{model_name}/{experiment_run}'
         
@@ -410,9 +412,9 @@ for model_name in ['resnet50']:
         #
         
         #
-        with open(f'./saved_models_baseline/{model_name}/experiments_setup_massBenignMalignant.txt', 'a') as out_file: #TODO ricordati di cambiare il nome del txt se cambia esperimento
+       # with open(f'./saved_models_baseline/{model_name}/experiments_setup_massBenignMalignant.txt', 'a') as out_file: #TODO ricordati di cambiare il nome del txt se cambia esperimento
 
-        # with open(f'./saved_models_baseline/{model_name}/experiments_setup_massCalcification.txt', 'a') as out_file: #TODO ricordati di cambiare il nome del txt se cambia esperimento
+        with open(f'./saved_models_baseline/{model_name}/experiments_setup_massCalcification.txt', 'a') as out_file: #TODO ricordati di cambiare il nome del txt se cambia esperimento
             # out_file.write(f'{experiment_run},{lr},{wd},{joint_lr_step_size},{gamma_value},{img_size},{num_classes},{train_batch_size},{test_batch_size},{num_train_epochs},{best_accuracy}\n')
             out_file.write(f'{experiment_run},{lr},{wd},{dropout_rate},{batch_size},{best_accuracy}\n')
 
