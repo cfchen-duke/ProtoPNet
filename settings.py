@@ -38,7 +38,7 @@ coefs = {
     'l1': 2e-4, #1e-4
 }
 
-num_train_epochs = 300 #TODO
+num_train_epochs = 200 #TODO
 num_warm_epochs = 5
 
 push_start = 10
