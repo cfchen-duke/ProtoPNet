@@ -103,6 +103,9 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+# sh scripts (custom)
+run_baseline_inference_and_confMatrix.sh
+
 # other folders (custom)
 saved_models/
 pretrained_models/
