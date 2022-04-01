@@ -86,33 +86,33 @@ def train_model(model, dataloaders, criterion,output_dir):
             running_loss += loss.item() * inputs.size(0)
             running_corrects += torch.sum(preds == labels.data)
     
-    classes = ('Benign','Malignant') 
-    cf_mat_norm = confusion_matrix(y_true, y_pred, normalize='true')
-    cf_mat = confusion_matrix(y_true, y_pred).astype(int)
-    np.save(os.path.join(output_dir,'confusion_matrix_norm.npy'),cf_mat_norm)
-    np.save(os.path.join(output_dir,'confusion_matrix.npy'),cf_mat)
+    # classes = ('Benign','Malignant') 
+    # cf_mat_norm = confusion_matrix(y_true, y_pred, normalize='true')
+    # cf_mat = confusion_matrix(y_true, y_pred).astype(int)
+    # np.save(os.path.join(output_dir,'confusion_matrix_norm.npy'),cf_mat_norm)
+    # np.save(os.path.join(output_dir,'confusion_matrix.npy'),cf_mat)
     
-    df = pd.DataFrame(cf_mat, index = [i for i in classes],
-                     columns = [i for i in classes])
-    plt.figure()
-    sn.heatmap(df, annot=True, linewidths=.5, cmap='cool', fmt="d", vmin=0)
-    plt.xlabel('Predicted label')
-    plt.ylabel('True label')
-    plt.savefig(os.path.join(output_dir,'confusion_matrix.pdf'),bbox_inches='tight')
+    # df = pd.DataFrame(cf_mat, index = [i for i in classes],
+    #                  columns = [i for i in classes])
+    # plt.figure()
+    # sn.heatmap(df, annot=True, linewidths=.5, cmap='Blues', linecolor='black', fmt="d", vmin=0)
+    # plt.xlabel('Predicted label')
+    # plt.ylabel('True label')
+    # plt.savefig(os.path.join(output_dir,'confusion_matrix.pdf'),bbox_inches='tight')
     
-    df_norm = pd.DataFrame(cf_mat_norm, index=[i for i in classes], columns=[i for i in classes])
-    plt.figure()
-    sn.heatmap(df_norm, annot=True, linewidths=.5, cmap='cool', vmin=0, vmax=1)
-    plt.xlabel('Predicted label')
-    plt.ylabel('True label')
-    plt.savefig(os.path.join(output_dir,'confusion_matrix_norm.pdf'),bbox_inches='tight')
+    # df_norm = pd.DataFrame(cf_mat_norm, index=[i for i in classes], columns=[i for i in classes])
+    # plt.figure()
+    # sn.heatmap(df_norm, annot=True, linewidths=.5, cmap='Blues', linecolor='black', vmin=0, vmax=1)
+    # plt.xlabel('Predicted label')
+    # plt.ylabel('True label')
+    # plt.savefig(os.path.join(output_dir,'confusion_matrix_norm.pdf'),bbox_inches='tight')
 
     #
     epoch_loss = running_loss / len(dataloaders.dataset)
     epoch_acc = running_corrects.double() / len(dataloaders.dataset)
 
-    with open(os.path.join(output_dir,'test_metrics.txt'),'w') as f_out:
-              f_out.write(f'loss,accuracy\n{epoch_loss},{epoch_acc}')
+    # with open(os.path.join(output_dir,'test_metrics.txt'),'w') as f_out:
+    #           f_out.write(f'loss,accuracy\n{epoch_loss},{epoch_acc}')
 
     print('{} Loss: {:.4f} Acc: {:.4f}'.format('test', epoch_loss, epoch_acc))
 
@@ -233,7 +233,8 @@ test_loader = torch.utils.data.DataLoader(
 
 
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = "cpu" #TODO attenzione!
 
 
 # Initialize the model for this run
