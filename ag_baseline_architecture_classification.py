@@ -50,14 +50,14 @@ set_seed(seed=1)
 # lr = [1e-3, 1e-4, 1e-5, 1e-6]
 # lr = [1e-5, 1e-6]
 lr = [1e-5]
-#lr=[1e-6]
+# lr=[1e-6]
 
 # lr = [5e-2, 1e-2, 5e-3, 1e-3, 5e-4, 1e-4]     #TODO
 # wd = [1e-1, 1e-2, 0]
 wd = [1e-3]
-dropout_rate = [0, 0.2, 0.4]
+dropout_rate = [0.7, 0]
 #dropout_rate=[0,0.4,0.7]
-batch_size = [40, 30]
+batch_size = [40]
 
 # joint_lr_step_size = [2, 5, 10]
 # gamma_value = [0.10, 0.50, 0.25]
@@ -216,17 +216,34 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use
         model_ft = models.resnet50(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
+        # model_ft.fc = nn.Sequential(
+
+        #     #Fully connected
+        #     nn.Linear(num_ftrs,4096),
+        #     nn.ReLU(),
+            
+        #     #Dropout
+        #     nn.Dropout(p=dropout_rate),
+            
+        #     # Classification layer
+        #     nn.Linear(4096, num_classes),
+        #     nn.Softmax()            
+        #     )
+        
         model_ft.fc = nn.Sequential(
 
             #Fully connected
-            nn.Linear(num_ftrs,4096),
+            nn.Linear(num_ftrs,1024),
+            nn.ReLU(),
+                       
+            nn.Linear(1024,512),
             nn.ReLU(),
             
             #Dropout
             nn.Dropout(p=dropout_rate),
             
             # Classification layer
-            nn.Linear(4096, num_classes),
+            nn.Linear(512, 2),
             nn.Softmax()            
             )
         input_size = img_size  
@@ -302,7 +319,7 @@ for model_name in ['resnet50']:
 # for model_name in ['vgg19']:
 
     print(f'-------------MODEL: {model_name} ----------------------------')
-    for idx,config in enumerate(chosen_configurations): #TODO attento: abbiamo saltato la prima peche la aveamo già
+    for idx,config in enumerate(chosen_configurations): 
         print(f'Starting config {idx}: {config}')
         lr = config[0]
         wd = config[1]
@@ -317,8 +334,8 @@ for model_name in ['resnet50']:
         # Models to choose from [resnet, alexnet, vgg, squeezenet, densenet, inception]
         # model_name = "resnet50"
         
-        #experiment_run = f'CBIS_baseline_massBenignMalignant_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}'
-        experiment_run = f'CBIS_baseline_massCalcification_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}' #TODO
+        experiment_run = f'CBIS_baseline_massBenignMalignant_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}'
+        # experiment_run = f'CBIS_baseline_massCalcification_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}' #TODO
 
         output_dir = f'./saved_models_baseline/{model_name}/{experiment_run}'
         
@@ -412,9 +429,9 @@ for model_name in ['resnet50']:
         #
         
         #
-       # with open(f'./saved_models_baseline/{model_name}/experiments_setup_massBenignMalignant.txt', 'a') as out_file: #TODO ricordati di cambiare il nome del txt se cambia esperimento
+        with open(f'./saved_models_baseline/{model_name}/experiments_setup_massBenignMalignant.txt', 'a') as out_file: #TODO ricordati di cambiare il nome del txt se cambia esperimento
 
-        with open(f'./saved_models_baseline/{model_name}/experiments_setup_massCalcification.txt', 'a') as out_file: #TODO ricordati di cambiare il nome del txt se cambia esperimento
+        # with open(f'./saved_models_baseline/{model_name}/experiments_setup_massCalcification.txt', 'a') as out_file: #TODO ricordati di cambiare il nome del txt se cambia esperimento
             # out_file.write(f'{experiment_run},{lr},{wd},{joint_lr_step_size},{gamma_value},{img_size},{num_classes},{train_batch_size},{test_batch_size},{num_train_epochs},{best_accuracy}\n')
             out_file.write(f'{experiment_run},{lr},{wd},{dropout_rate},{batch_size},{best_accuracy}\n')
 
