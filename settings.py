@@ -15,7 +15,10 @@ add_on_layers_type = 'regular'
 
 data_path = './datasets/' #
 train_dir = data_path + 'push_augmented/' #
+
 test_dir = data_path + 'valid_augmented' #'valid/' #
+# test_dir = data_path + 'test/' #'valid/' #TODO
+
 train_push_dir = data_path + 'push/' #
 train_batch_size = 25 #50 #35 #80 #20 #30 #25 #12 #20 #
 test_batch_size = 20 #60 #40 #100 #20 #25 #20 #10 #
@@ -38,7 +41,7 @@ coefs = {
     'l1': 1e-4
 }
 
-num_train_epochs = 500 #TODO
+num_train_epochs = 200 #TODO
 num_warm_epochs = 5
 
 push_start = 10
