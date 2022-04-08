@@ -22,17 +22,17 @@ import os
 import copy
 from tqdm import tqdm
 from time import gmtime,strftime
-from settings import train_dir, test_dir,img_size, num_classes, num_train_epochs \
+from settings import train_dir, test_dir,img_size 
                      # train_batch_size, test_batch_size
 from preprocess import mean, std, preprocess_input_function
 
-# from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score
 # import seaborn as sn
 # import pandas as pd
 
 
-
-num_epochs = num_train_epochs
+num_classes= 2
+num_epochs = 300 #TODO
 
 import random
 torch.cuda.empty_cache()
@@ -48,14 +48,14 @@ set_seed(seed=1)
 
 
 # lr = [1e-3, 1e-4, 1e-5, 1e-6]
-# lr = [1e-5, 1e-6]
-lr = [1e-5]
+lr = [1e-5, 1e-6]
+# lr = [1e-5]
 # lr=[1e-6]
 
 # lr = [5e-2, 1e-2, 5e-3, 1e-3, 5e-4, 1e-4]     #TODO
 # wd = [1e-1, 1e-2, 0]
 wd = [1e-3]
-dropout_rate = [0.7, 0]
+dropout_rate = [0.7]
 #dropout_rate=[0,0.4,0.7]
 batch_size = [40]
 
@@ -108,7 +108,9 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                 
             running_loss = 0.0
             running_corrects = 0
-
+            # y_true = []
+            # y_pred = []
+            
             # Iterate over data.
             for inputs, labels in tqdm(dataloaders[phase]):
                 inputs = inputs.to(device)
@@ -135,6 +137,10 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                         loss = criterion(outputs, labels)                       
 
                     _, preds = torch.max(outputs, 1)
+                    
+                    # # PREDICTIONS 
+                    # y_pred.extend(preds.detach().cpu().tolist())
+                    # y_true.extend(labels.detach().cpu().tolist())
 
                     # backward + optimize only if in training phase
                     if phase == 'train':
@@ -147,6 +153,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
+            # epoch_acc_sklearn = accuracy_score(y_true,y_pred)
 
             with open(os.path.join(output_dir,f'{phase}_metrics.txt'),'a') as f_out:
                       f_out.write(f'{epoch},{epoch_loss},{epoch_acc}\n')
