@@ -105,6 +105,7 @@ venv.bak/
 
 # sh scripts (custom)
 run_baseline_inference_and_confMatrix.sh
+run_clahe.sh
 
 # other folders (custom)
 saved_models/
