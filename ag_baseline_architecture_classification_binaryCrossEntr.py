@@ -32,7 +32,9 @@ from sklearn.metrics import accuracy_score
 
 
 num_classes = 1
-num_epochs = 50 #TODO
+num_epochs = 500 #TODO
+window = 20
+patience = int(np.ceil(50/window)) # sono 3*20 epoche ad esempio
 
 import random
 torch.cuda.empty_cache()
@@ -50,13 +52,17 @@ set_seed(seed=1)
 # lr = [1e-3, 1e-4, 1e-5, 1e-6]
 # lr = [1e-5, 1e-6]
 # lr = [1e-5]
-lr=[1e-5]
+# lr=[1e-6, 1e-7]
+lr=[5e-6]
 
 # lr = [5e-2, 1e-2, 5e-3, 1e-3, 5e-4, 1e-4]     #TODO
 # wd = [1e-1, 1e-2, 0]
-wd = [1e-3]
-dropout_rate = [0]
+# wd = [1e-3]
+wd = [5e-3]
+
+#dropout_rate = [0.4, 0.2]
 #dropout_rate=[0,0.4,0.7]
+dropout_rate=[0.5]
 batch_size = [40]
 batch_size_valid = 2
 
@@ -84,14 +90,16 @@ def get_N_HyperparamsConfigs(N=0, lr=lr, wd=wd, dropout_rate=dropout_rate):
     return [configurations[x] for x in chosen_configs]
 
 
-def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
+def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False, window=20, patience=3):
     since = time.time()
-
     val_acc_history = []
     train_acc_history = []
     val_loss=[]
     train_loss=[]
-
+    count = 0
+    prima_volta = True
+    to_be_stopped = False
+    
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
 
@@ -177,10 +185,47 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
             if phase == 'val':
                 val_acc_history.append(epoch_acc)
                 val_loss.append(epoch_loss)
+                
+                ## EARLY STOPPING
+                if ((epoch+1) >= 2*(window)) and ((epoch+1) % window==0):
+                    loss_npy = np.array(val_loss,dtype=float)
+                    windowed = [np.mean(loss_npy[i:i+window]) for i in range(0,len(val_loss),window)]
+                    # windowed_epochs = range(window,len(val_loss)+window,window)
+                    windowed_2 = windowed[1:]
+                    windowed_2.append(0.0)
+                    deriv_w = [(e[0]-e[1])/window for e in zip(windowed,windowed_2)]
+                    deriv_w = deriv_w[:-1]
+                    
+                    if prima_volta:
+                        prima_volta = False
+                        thresh = deriv_w[0]*0.10 #TODO
+                    
+                    if deriv_w[-1] < thresh:
+                        print(f'DETECTION DI VALORE SOTTOSOGLIA, con soglia {thresh}')
+                        count += 1
+                        if count ==1:
+                            model_wts_earlyStopped = copy.deepcopy(model.state_dict())                        
+                            torch.save(obj=model, f=os.path.join(output_dir,('earlyStopped_epoch_{}_acc_{:.4f}.pth').format(epoch, epoch_acc)))
+                            print('Modello salvato per quando verrà stoppato allenamento')
+                        if count >= patience:
+                            to_be_stopped = True
+                            print(f'PAZIENZA SUPERATA EPOCA {epoch}, ESCO')
+                            break
+                        else:
+                            print(f'EPOCA {epoch} - ASPETTO ANCORA IN PAZIENZA ({patience-count}) EPOCHE')
+                            continue
+                        
+                        
+                    else:
+                        count = 0
+                
             if phase == 'train':
                 train_acc_history.append(epoch_acc)
                 train_loss.append(epoch_loss)
                 # joint_lr_scheduler.step()
+        if to_be_stopped:
+            break
+        
         print()
         
 
@@ -189,7 +234,9 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     print('Best val Acc: {:4f}'.format(best_acc))
 
     # load best model weights
-    model.load_state_dict(best_model_wts)
+    # model.load_state_dict(best_model_wts)
+    model.load_state_dict(model_wts_earlyStopped)
+
     return model, val_acc_history, train_acc_history, val_loss, train_loss, best_acc
 
 
@@ -209,6 +256,69 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use
     model_ft = None
     input_size = 0
 
+    if model_name == "resnet18":
+        """ Resnet18
+        """
+        model_ft = models.resnet18(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.fc.in_features
+        model_ft.fc = nn.Linear(num_ftrs, num_classes)
+        ##TODO 11 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
+        model_ft.fc = nn.Sequential(
+
+            # #Fully connected
+            # nn.Linear(num_ftrs,256),
+            # nn.ReLU(),
+            
+            # # nn.Dropout(p=dropout_rate), #TODO
+            
+            # nn.Linear(256,128),
+            # nn.ReLU(),
+            
+            # #Dropout
+            # nn.Dropout(p=dropout_rate),
+            
+            # # Classification layer
+            # nn.Linear(128, num_classes),
+            # # nn.Softmax() 
+            # nn.Sigmoid()
+            # )
+            
+            
+            
+            # #Fully connected
+            # nn.Linear(num_ftrs,128),
+            # nn.ReLU(),
+            
+            # # nn.Dropout(p=dropout_rate), #TODO
+            
+            # nn.Linear(128,10),
+            # nn.ReLU(),
+            
+            # #Dropout
+            # nn.Dropout(p=dropout_rate),
+            
+            # # Classification layer
+            # nn.Linear(10, num_classes),
+            # # nn.Softmax() 
+            # nn.Sigmoid()
+            # )
+            
+            #Fully connected
+            nn.Linear(num_ftrs,10),
+            nn.ReLU(),
+            
+            #Dropout
+            nn.Dropout(p=dropout_rate),
+            
+            # Classification layer
+            nn.Linear(10, num_classes),
+            # nn.Softmax() 
+            nn.Sigmoid()
+            )
+        
+        input_size = img_size  
+
     if model_name == "resnet34":
         """ Resnet34
         """
@@ -219,18 +329,48 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use
         ##TODO 8 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
         model_ft.fc = nn.Sequential(
 
-            #Fully connected
-            nn.Linear(num_ftrs,256),
-            nn.ReLU(),
+            # #Fully connected
+            # nn.Linear(num_ftrs,256),
+            # nn.ReLU(),
                        
-            nn.Linear(256,128),
+            # nn.Linear(256,128),
+            # nn.ReLU(),
+            
+            # #Dropout
+            # nn.Dropout(p=dropout_rate),
+            
+            # # Classification layer
+            # nn.Linear(128, num_classes),
+            # # nn.Softmax() 
+            # nn.Sigmoid()
+            # )
+            
+            # #TODO consiglio di fare 512>128>10>1. Fully connected
+            # nn.Linear(num_ftrs,128),
+            # nn.ReLU(),
+                       
+            # nn.Linear(128,10),
+            # nn.ReLU(),
+            
+            # #Dropout
+            # nn.Dropout(p=dropout_rate),
+            
+            # # Classification layer
+            # nn.Linear(10, num_classes),
+            # # nn.Softmax() 
+            # nn.Sigmoid()
+            # )
+            
+            
+            #TODO 14 aprile 2022 mattina
+            nn.Linear(num_ftrs,20),
             nn.ReLU(),
             
             #Dropout
             nn.Dropout(p=dropout_rate),
             
             # Classification layer
-            nn.Linear(128, num_classes),
+            nn.Linear(20, num_classes),
             # nn.Softmax() 
             nn.Sigmoid()
             )
@@ -352,7 +492,8 @@ chosen_configurations = get_N_HyperparamsConfigs(N=N) #TODO
 
 
 # for model_name in ['resnet50']:
-for model_name in ['resnet34']: ##TODO 8 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
+for model_name in ['resnet18']: ##TODO 8 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
+# for model_name in ['resnet34']: ##TODO 8 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
 
 
     print(f'-------------MODEL: {model_name} ----------------------------')
@@ -463,7 +604,7 @@ for model_name in ['resnet34']: ##TODO 8 aprile 2022: idea di semplificare la ba
         criterion = nn.BCELoss()
         
         # Train and evaluate
-        model_ft, val_accs, train_accs, val_loss, train_loss, best_accuracy= train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs, is_inception=(model_name=="inception"))
+        model_ft, val_accs, train_accs, val_loss, train_loss, best_accuracy= train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs, is_inception=(model_name=="inception"),window=window, patience=patience)
         
         #
         if not os.path.exists(f'./saved_models_baseline/{model_name}/experiments_setup_massBenignMalignant.txt'):
