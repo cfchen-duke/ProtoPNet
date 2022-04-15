@@ -22,19 +22,39 @@ import os
 import copy
 from tqdm import tqdm
 from time import gmtime,strftime
-from settings import train_dir, test_dir,img_size
+from settings import train_dir, test_dir
                      # train_batch_size, test_batch_size
-from preprocess import mean, std, preprocess_input_function
+# from preprocess import mean, std 
+
+#TODO prenderli corretamente col rispettivo valore calcolato:
+mean = np.load('./datasets/mean.npy')
+std = np.load('./datasets/std.npy')
+
 
 from sklearn.metrics import accuracy_score
 # import seaborn as sn
 # import pandas as pd
 
+img_size = 564 #TODO
+num_epochs = 1000 #TODO
+
+
+lr=[1e-6]
+wd = [1e-3]
+dropout_rate = [0.5, 0.2]
+batch_size = [80]
+batch_size_valid = 2
+# joint_lr_step_size = [2, 5, 10]
+# gamma_value = [0.10, 0.50, 0.25]
 
 num_classes = 1
-num_epochs = 500 #TODO
 window = 20
 patience = int(np.ceil(50/window)) # sono 3*20 epoche ad esempio
+
+
+
+
+
 
 import random
 torch.cuda.empty_cache()
@@ -49,25 +69,6 @@ set_seed(seed=1)
 
 
 
-# lr = [1e-3, 1e-4, 1e-5, 1e-6]
-# lr = [1e-5, 1e-6]
-# lr = [1e-5]
-# lr=[1e-6, 1e-7]
-lr=[5e-6]
-
-# lr = [5e-2, 1e-2, 5e-3, 1e-3, 5e-4, 1e-4]     #TODO
-# wd = [1e-1, 1e-2, 0]
-# wd = [1e-3]
-wd = [5e-3]
-
-#dropout_rate = [0.4, 0.2]
-#dropout_rate=[0,0.4,0.7]
-dropout_rate=[0.5]
-batch_size = [40]
-batch_size_valid = 2
-
-# joint_lr_step_size = [2, 5, 10]
-# gamma_value = [0.10, 0.50, 0.25]
 
 N = len(lr) * len(wd) * len(dropout_rate) * len(batch_size)
 #* len(joint_lr_step_size) * len(gamma_value)
@@ -286,26 +287,13 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use
             
             
             
-            # #Fully connected
-            # nn.Linear(num_ftrs,128),
-            # nn.ReLU(),
-            
-            # # nn.Dropout(p=dropout_rate), #TODO
-            
-            # nn.Linear(128,10),
-            # nn.ReLU(),
-            
-            # #Dropout
-            # nn.Dropout(p=dropout_rate),
-            
-            # # Classification layer
-            # nn.Linear(10, num_classes),
-            # # nn.Softmax() 
-            # nn.Sigmoid()
-            # )
-            
             #Fully connected
-            nn.Linear(num_ftrs,10),
+            nn.Linear(num_ftrs,128),
+            nn.ReLU(),
+            
+            # nn.Dropout(p=dropout_rate), #TODO
+            
+            nn.Linear(128,10),
             nn.ReLU(),
             
             #Dropout
@@ -316,6 +304,21 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use
             # nn.Softmax() 
             nn.Sigmoid()
             )
+        
+        
+            
+            # #Fully connected
+            # nn.Linear(num_ftrs,10),
+            # nn.ReLU(),
+            
+            # #Dropout
+            # nn.Dropout(p=dropout_rate),
+            
+            # # Classification layer
+            # nn.Linear(10, num_classes),
+            # # nn.Softmax() 
+            # nn.Sigmoid()
+            # )
         
         input_size = img_size  
 
@@ -444,52 +447,15 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use
         model_ft.classifier = nn.Linear(num_ftrs, num_classes)
         input_size = 224
 
-#
-    # append_dropout(model_ft,dropout_rate) #TODO
-#   
+
     return model_ft, input_size
-
-
-
-# def append_dropout(model, rate):
-#         for name, module in model.named_children():
-#             if len(list(module.children())) > 0:
-#                 append_dropout(module,rate)
-#             if isinstance(module, nn.ReLU):
-#                 # new = nn.Sequential(module, nn.Dropout2d(p=rate, inplace=True))
-#                 new = nn.Sequential(module, nn.Dropout(p=rate, inplace=True))
-
-#                 setattr(model, name, new)
-
-
-
 
 
 
 #%% CODICE
 
-
-
-
 # chosen_configurations = get_N_HyperparamsConfigs(N=N)
 chosen_configurations = get_N_HyperparamsConfigs(N=N) #TODO
-
-
-
-
-
-# print('LABELS OF IMAGE DATASET:')
-# for k,v in test_dataset.class_to_idx.items():
-#     print(k,v)
-# # print(test_dataset.imgs)
-
-
-
-
-
-
-
-
 
 # for model_name in ['resnet50']:
 for model_name in ['resnet18']: ##TODO 8 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
@@ -506,12 +472,7 @@ for model_name in ['resnet18']: ##TODO 8 aprile 2022: idea di semplificare la ba
         train_batch_size = batch_size
         test_batch_size = batch_size_valid
         
-        # joint_lr_step_size = config[2]
-        # gamma_value = config[3]
-        
-        # Models to choose from [resnet, alexnet, vgg, squeezenet, densenet, inception]
-        # model_name = "resnet50"
-        
+       
         experiment_run = f'CBIS_baseline_massBenignMalignant_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}_binaryCrossEntr'
         # experiment_run = f'CBIS_baseline_massCalcification_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}' #TODO
 
