@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 import copy
+import argparse
 from tqdm import tqdm
 from time import gmtime,strftime
 from settings import train_dir, test_dir
@@ -27,22 +28,40 @@ from settings import train_dir, test_dir
 # from preprocess import mean, std 
 
 #TODO prenderli corretamente col rispettivo valore calcolato:
-mean = np.load('./datasets/mean.npy')
-std = np.load('./datasets/std.npy')
-
+#mean = np.load('./datasets/mean.npy')
+#std = np.load('./datasets/std.npy')
+mean = 0.5
+std = 0.5
 
 from sklearn.metrics import accuracy_score
 # import seaborn as sn
 # import pandas as pd
 
-img_size = 564 #TODO
+img_size = 224 #564 #224 #TODO
 num_epochs = 1000 #TODO
 
 
-lr=[1e-6]
-wd = [1e-3]
-dropout_rate = [0.5, 0.2]
-batch_size = [80]
+
+
+parse = argparse.ArgumentParser(description="")
+
+parse.add_argument('model_name', help='Name of the baseline architecture: resnet18, resnet34, resnet50, vgg..',type=str)
+parse.add_argument('lr', help='learning rate',type=float)
+parse.add_argument('wd', help='weight decay',type=float)
+parse.add_argument('dr', help='dropout rate',type=float)
+parse.add_argument('is_one_dropout',help='Use one dropout in the bottleneck, if False uses two.',type=bool,default=True)
+args = parse.parse_args()
+
+model_names = [args.model_name+'_esperimenti_sistematici']#TODO
+lr = [args.lr]
+wd = [args.wd]
+dropout_rate = [args.dr]
+is_one_dropout = args.is_one_dropout
+# lr=[1e-6]
+# wd = [1e-3] #[5e-3]
+# dropout_rate = [0.5]
+
+batch_size = [40]
 batch_size_valid = 2
 # joint_lr_step_size = [2, 5, 10]
 # gamma_value = [0.10, 0.50, 0.25]
@@ -256,6 +275,7 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use
     #   variables is model specific.
     model_ft = None
     input_size = 0
+    
 
     if model_name == "resnet18":
         """ Resnet18
@@ -265,45 +285,65 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
         ##TODO 11 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
-        model_ft.fc = nn.Sequential(
+        if is_one_dropout==True:
+            model_ft.fc = nn.Sequential(
+    
+                #Fully connected
+                nn.Linear(num_ftrs,256),
+                nn.ReLU(),
+                
+                nn.Linear(256,128),
+                nn.ReLU(),
+                
+                #Dropout
+                nn.Dropout(p=dropout_rate),
+                
+                # Classification layer
+                nn.Linear(128, num_classes),
+                # nn.Softmax() 
+                nn.Sigmoid()
+                )
+        
+        else:
+            model_ft.fc = nn.Sequential(
 
+                #Fully connected
+                nn.Linear(num_ftrs,256),
+                nn.ReLU(),
+                
+                nn.Dropout(p=dropout_rate),
+
+                nn.Linear(256,128),
+                nn.ReLU(),
+                
+                #Dropout
+                nn.Dropout(p=dropout_rate),
+                
+                # Classification layer
+                nn.Linear(128, num_classes),
+                # nn.Softmax() 
+                nn.Sigmoid()
+                )
+            
+            
+            
             # #Fully connected
-            # nn.Linear(num_ftrs,256),
+            # nn.Linear(num_ftrs,128),
             # nn.ReLU(),
             
             # # nn.Dropout(p=dropout_rate), #TODO
             
-            # nn.Linear(256,128),
+            # nn.Linear(128,10),
             # nn.ReLU(),
             
             # #Dropout
             # nn.Dropout(p=dropout_rate),
             
             # # Classification layer
-            # nn.Linear(128, num_classes),
+            # nn.Linear(10, num_classes),
             # # nn.Softmax() 
             # nn.Sigmoid()
             # )
-            
-            
-            
-            #Fully connected
-            nn.Linear(num_ftrs,128),
-            nn.ReLU(),
-            
-            # nn.Dropout(p=dropout_rate), #TODO
-            
-            nn.Linear(128,10),
-            nn.ReLU(),
-            
-            #Dropout
-            nn.Dropout(p=dropout_rate),
-            
-            # Classification layer
-            nn.Linear(10, num_classes),
-            # nn.Softmax() 
-            nn.Sigmoid()
-            )
         
         
             
@@ -332,51 +372,53 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use
         ##TODO 8 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
         model_ft.fc = nn.Sequential(
 
-            # #Fully connected
-            # nn.Linear(num_ftrs,256),
-            # nn.ReLU(),
+            #Fully connected
+            nn.Linear(num_ftrs,256),
+            nn.ReLU(),
                        
-            # nn.Linear(256,128),
-            # nn.ReLU(),
-            
-            # #Dropout
-            # nn.Dropout(p=dropout_rate),
-            
-            # # Classification layer
-            # nn.Linear(128, num_classes),
-            # # nn.Softmax() 
-            # nn.Sigmoid()
-            # )
-            
-            # #TODO consiglio di fare 512>128>10>1. Fully connected
-            # nn.Linear(num_ftrs,128),
-            # nn.ReLU(),
-                       
-            # nn.Linear(128,10),
-            # nn.ReLU(),
-            
-            # #Dropout
-            # nn.Dropout(p=dropout_rate),
-            
-            # # Classification layer
-            # nn.Linear(10, num_classes),
-            # # nn.Softmax() 
-            # nn.Sigmoid()
-            # )
-            
-            
-            #TODO 14 aprile 2022 mattina
-            nn.Linear(num_ftrs,20),
+            nn.Linear(256,128),
             nn.ReLU(),
             
             #Dropout
             nn.Dropout(p=dropout_rate),
             
             # Classification layer
-            nn.Linear(20, num_classes),
+            nn.Linear(128, num_classes),
             # nn.Softmax() 
             nn.Sigmoid()
             )
+            
+            
+            
+            # # #TODO consiglio di fare 512>128>10>1. Fully connected
+            # nn.Linear(num_ftrs,128),
+            # nn.ReLU(),
+                       
+            # nn.Linear(128,10),
+            # nn.ReLU(),
+            
+            # # #Dropout
+            # nn.Dropout(p=dropout_rate),
+            
+            # # # Classification layer
+            # nn.Linear(10, num_classes),
+            # # # nn.Softmax() 
+            # nn.Sigmoid()
+            # )
+            
+            
+            #TODO 14 aprile 2022 mattina
+            #nn.Linear(num_ftrs,20),
+            #nn.ReLU(),
+            
+            #Dropout
+            #nn.Dropout(p=dropout_rate),
+            
+            # Classification layer
+            #nn.Linear(20, num_classes),
+            # nn.Softmax() 
+            #nn.Sigmoid()
+            #)
         
         input_size = img_size  
 
@@ -392,39 +434,39 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use
         model_ft = models.resnet50(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
-      
+   
         
         model_ft.fc = nn.Sequential(
 
             #Fully connected
-            nn.Linear(num_ftrs,1024),
-            nn.ReLU(),
+            #nn.Linear(num_ftrs,1024),
+            #nn.ReLU(),
                        
-            nn.Linear(1024,512),
-            nn.ReLU(),
+            #nn.Linear(1024,512),
+            #nn.ReLU(),
             
             #Dropout
-            nn.Dropout(p=dropout_rate),
+            #nn.Dropout(p=dropout_rate),
             
             # Classification layer
-            nn.Linear(512, num_classes),
+            #nn.Linear(512, num_classes),
             # nn.Softmax() 
-            nn.Sigmoid()
-            )
+            #nn.Sigmoid()
+            #)
             
             ## VERSIONE CON SOLO DUE FC E NON TRE:
             # #Fully connected
-            # nn.Linear(num_ftrs,512),
-            # nn.ReLU(),
+            nn.Linear(num_ftrs,512),
+            nn.ReLU(),
                                   
             # #Dropout
-            # nn.Dropout(p=dropout_rate),
+            nn.Dropout(p=dropout_rate),
             
             # # Classification layer
-            # nn.Linear(512, num_classes),
+            nn.Linear(512, num_classes),
             # # nn.Softmax() 
-            # nn.Sigmoid()
-            # )
+            nn.Sigmoid()
+            )
         
         input_size = img_size  
     
@@ -457,9 +499,10 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use
 # chosen_configurations = get_N_HyperparamsConfigs(N=N)
 chosen_configurations = get_N_HyperparamsConfigs(N=N) #TODO
 
+for model_name in model_names:
 # for model_name in ['resnet50']:
-for model_name in ['resnet18']: ##TODO 8 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
-# for model_name in ['resnet34']: ##TODO 8 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
+#for model_name in ['resnet18']: ##TODO 8 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
+#for model_name in ['resnet34']: ##TODO 8 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
 
 
     print(f'-------------MODEL: {model_name} ----------------------------')
@@ -533,9 +576,9 @@ for model_name in ['resnet18']: ##TODO 8 aprile 2022: idea di semplificare la ba
         
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         
-        
+        #print(f'model_name={model_name[:9]}')
         # Initialize the model for this run
-        model_ft, input_size = initialize_model(model_name, num_classes, feature_extract, dropout_rate, use_pretrained=True)
+        model_ft, input_size = initialize_model(model_name[:8], num_classes, feature_extract, dropout_rate, use_pretrained=True) #TODO modelname
         
         with open(os.path.join(output_dir,'model_architecture.txt'),'w') as f_out:
             f_out.write(f'{model_ft}')
@@ -591,7 +634,7 @@ for model_name in ['resnet18']: ##TODO 8 aprile 2022: idea di semplificare la ba
         # plt.ylim(bottom=0.5,top=1)
         plt.legend()
         b_acc = best_accuracy
-        plt.title(f'Model: {model_name} Loss: BCE\nLR: {lr}, WD: {wd}, dropout: {dropout_rate},\nbest validation accuracy: {np.round(b_acc,decimals=2)}, batch size: {batch_size}')
+        plt.title(f'Model: {model_name[:8]} Loss: BCE\nLR: {lr}, WD: {wd}, dropout: {dropout_rate},\nbest validation accuracy: {np.round(b_acc,decimals=2)}, batch size: {batch_size}')
         plt.xlabel('Epochs')
         plt.ylabel('Accuracy')
         plt.grid()
@@ -607,7 +650,7 @@ for model_name in ['resnet18']: ##TODO 8 aprile 2022: idea di semplificare la ba
         plt.plot(x_axis,val_loss,'*-b',label='Validation')
         # plt.ylim(bottom=-0.5)
         plt.legend()
-        plt.title(f'Model: {model_name} Loss: BCE\nLR: {lr}, WD: {wd}, dropout: {dropout_rate}, batch size: {batch_size}')
+        plt.title(f'Model: {model_name[:8]} Loss: BCE\nLR: {lr}, WD: {wd}, dropout: {dropout_rate}, batch size: {batch_size}')
         plt.xlabel('Epochs')
         plt.ylabel('Loss')
         plt.grid()
