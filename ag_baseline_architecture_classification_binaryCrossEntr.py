@@ -28,8 +28,8 @@ from settings import train_dir, test_dir
 # from preprocess import mean, std 
 
 #TODO prenderli corretamente col rispettivo valore calcolato:
-mean = np.load('./datasets/mean.npy')
-std = np.load('./datasets/std.npy')
+mean = np.float32(np.uint8(np.load('./datasets/mean.npy'))/255)
+std = np.float32(np.uint8(np.load('./datasets/std.npy'))/255)
 # mean = 0.5
 # std = 0.5
 
