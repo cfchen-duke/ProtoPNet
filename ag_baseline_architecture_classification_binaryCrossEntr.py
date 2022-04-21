@@ -28,10 +28,10 @@ from settings import train_dir, test_dir
 # from preprocess import mean, std 
 
 #TODO prenderli corretamente col rispettivo valore calcolato:
-#mean = np.load('./datasets/mean.npy')
-#std = np.load('./datasets/std.npy')
-mean = 0.5
-std = 0.5
+mean = np.load('./datasets/mean.npy')
+std = np.load('./datasets/std.npy')
+# mean = 0.5
+# std = 0.5
 
 from sklearn.metrics import accuracy_score
 # import seaborn as sn
@@ -52,7 +52,7 @@ parse.add_argument('dr', help='dropout rate',type=float)
 parse.add_argument('is_one_dropout',help='Use one dropout in the bottleneck, if False uses two.',type=bool,default=True)
 args = parse.parse_args()
 
-model_names = [args.model_name+'_esperimenti_sistematici']#TODO
+model_names = [args.model_name+'_esperimenti_sistematici_squared224']#TODO
 lr = [args.lr]
 wd = [args.wd]
 dropout_rate = [args.dr]
@@ -254,8 +254,10 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     print('Best val Acc: {:4f}'.format(best_acc))
 
     # load best model weights
-    # model.load_state_dict(best_model_wts)
-    model.load_state_dict(model_wts_earlyStopped)
+    if to_be_stopped==False: #the case when EarlyStop never occurs
+        model.load_state_dict(best_model_wts)
+    else:
+        model.load_state_dict(model_wts_earlyStopped)
 
     return model, val_acc_history, train_acc_history, val_loss, train_loss, best_acc
 
@@ -516,7 +518,7 @@ for model_name in model_names:
         test_batch_size = batch_size_valid
         
        
-        experiment_run = f'CBIS_baseline_massBenignMalignant_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}_binaryCrossEntr'
+        experiment_run = f'CBIS_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}_binaryCrossEntr'
         # experiment_run = f'CBIS_baseline_massCalcification_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}' #TODO
 
         output_dir = f'./saved_models_baseline/{model_name}/{experiment_run}'
