@@ -49,14 +49,15 @@ parse.add_argument('model_name', help='Name of the baseline architecture: resnet
 parse.add_argument('lr', help='learning rate',type=float)
 parse.add_argument('wd', help='weight decay',type=float)
 parse.add_argument('dr', help='dropout rate',type=float)
-parse.add_argument('is_one_dropout',help='Use one dropout in the bottleneck, if False uses two.',type=bool,default=True)
+parse.add_argument('num_dropouts',help='Number of dropout layers in the bottleneck of ResNet18, if 1 uses one, if 2 uses two.', type=int)
 args = parse.parse_args()
 
 model_names = [args.model_name+'_esperimenti_sistematici_squared224']#TODO
 lr = [args.lr]
 wd = [args.wd]
 dropout_rate = [args.dr]
-is_one_dropout = args.is_one_dropout
+num_dropouts = args.num_dropouts
+
 # lr=[1e-6]
 # wd = [1e-3] #[5e-3]
 # dropout_rate = [0.5]
@@ -272,7 +273,7 @@ def set_parameter_requires_grad(model, feature_extracting):
             
             
 
-def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use_pretrained=True):
+def initialize_model(model_name, num_classes, feature_extract, dropout_rate, num_dropouts, use_pretrained=True):
     # Initialize these variables which will be set in this if statement. Each of these
     #   variables is model specific.
     model_ft = None
@@ -287,7 +288,7 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
         ##TODO 11 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
-        if is_one_dropout==True:
+        if num_dropouts==1:
             model_ft.fc = nn.Sequential(
     
                 #Fully connected
@@ -306,7 +307,7 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use
                 nn.Sigmoid()
                 )
         
-        else:
+        elif num_dropouts==2:
             model_ft.fc = nn.Sequential(
 
                 #Fully connected
@@ -326,6 +327,10 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, use
                 # nn.Softmax() 
                 nn.Sigmoid()
                 )
+            
+        else:
+            print('Attention please, invalid value for num_dropouts')
+            raise ValueError
             
             
             
@@ -580,7 +585,7 @@ for model_name in model_names:
         
         #print(f'model_name={model_name[:9]}')
         # Initialize the model for this run
-        model_ft, input_size = initialize_model(model_name[:8], num_classes, feature_extract, dropout_rate, use_pretrained=True) #TODO modelname
+        model_ft, input_size = initialize_model(model_name[:8], num_classes, feature_extract, dropout_rate, num_dropouts, use_pretrained=True) #TODO modelname
         
         with open(os.path.join(output_dir,'model_architecture.txt'),'w') as f_out:
             f_out.write(f'{model_ft}')
@@ -615,13 +620,13 @@ for model_name in model_names:
         #
         if not os.path.exists(f'./saved_models_baseline/{model_name}/experiments_setup_massBenignMalignant.txt'):
             with open(f'./saved_models_baseline/{model_name}/experiments_setup_massBenignMalignant.txt', 'w') as out_file:
-                out_file.write('{experiment_run},{lr},{wd},{dropout_rate},{batch_size},{best_accuracy}\n')
+                out_file.write('{experiment_run},{lr},{wd},{dropout_rate},{num_dropouts},{batch_size},{best_accuracy}\n')
 
         with open(f'./saved_models_baseline/{model_name}/experiments_setup_massBenignMalignant.txt', 'a') as out_file: #TODO ricordati di cambiare il nome del txt se cambia esperimento
 
         # with open(f'./saved_models_baseline/{model_name}/experiments_setup_massCalcification.txt', 'a') as out_file: #TODO ricordati di cambiare il nome del txt se cambia esperimento
             # out_file.write(f'{experiment_run},{lr},{wd},{joint_lr_step_size},{gamma_value},{img_size},{num_classes},{train_batch_size},{test_batch_size},{num_train_epochs},{best_accuracy}\n')
-            out_file.write(f'{experiment_run},{lr},{wd},{dropout_rate},{batch_size},{best_accuracy}\n')
+            out_file.write(f'{experiment_run},{lr},{wd},{dropout_rate},{num_dropouts},{batch_size},{best_accuracy}\n')
 
         
         
