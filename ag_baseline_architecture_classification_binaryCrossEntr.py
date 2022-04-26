@@ -3,8 +3,8 @@
 """
 Created on Fri Mar 25 09:15:42 2022
 
-baseline usando ResNet50 per la classificazione di masse MALIGNANT v. BENIGN
-da paragonare al ppnet
+baseline usando ResNet18/34/50 per la classificazione di masse MALIGNANT v. BENIGN
+
 
 @author: si-lab
 """
@@ -12,9 +12,7 @@ from __future__ import print_function
 from __future__ import division
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import numpy as np
-import torchvision
 from torchvision import datasets, models, transforms
 import matplotlib.pyplot as plt
 import time
@@ -23,15 +21,24 @@ import copy
 import argparse
 from tqdm import tqdm
 from time import gmtime,strftime
-from settings import train_dir, test_dir
-                     # train_batch_size, test_batch_size
-# from preprocess import mean, std 
+
+
+data_path = os.path.join(os.getcwd(),'datasets') #
+train_dir = os.path.join(data_path,'push_augmented') #
+# train_dir = data_path + 'push/' # TODO
+
+
+test_dir = os.path.join(data_path,'valid') #'valid/' #
+# test_dir = data_path + 'valid_augmented' #'valid/' #
+# test_dir = data_path + 'test/' #'valid/' #TODO
+
+
 
 #TODO prenderli corretamente col rispettivo valore calcolato:
-mean = np.float32(np.uint8(np.load('./datasets/mean.npy'))/255)
-std = np.float32(np.uint8(np.load('./datasets/std.npy'))/255)
-# mean = 0.5
-# std = 0.5
+# mean = np.float32(np.uint8(np.load(os.path.join(data_path,'mean.npy')))/255)
+# std = np.float32(np.uint8(np.load(os.path.join(data_path,'std.npy')))/255)
+mean = 0.5
+std = 0.5
 
 from sklearn.metrics import accuracy_score
 # import seaborn as sn
@@ -50,19 +57,23 @@ parse.add_argument('lr', help='learning rate',type=float)
 parse.add_argument('wd', help='weight decay',type=float)
 parse.add_argument('dr', help='dropout rate',type=float)
 parse.add_argument('num_dropouts',help='Number of dropout layers in the bottleneck of ResNet18, if 1 uses one, if 2 uses two.', type=int)
+#Add string of information about the specific experiment run, as dataset used, images specification, etc
+parse.add_argument('run_info', help='Plain-text string of information about the specific experiment run, as the dataset used, the images specification, etc. This is saved in run_info.txt',type=str)
+
 args = parse.parse_args()
 
-model_names = [args.model_name+'_esperimenti_sistematici_squared224']#TODO
+model_names = [args.model_name+f'_esperimenti_sistematici_{img_size}_clahe']#TODO clahe?
 lr = [args.lr]
 wd = [args.wd]
 dropout_rate = [args.dr]
 num_dropouts = args.num_dropouts
+run_info_to_be_written = args.run_info
 
 # lr=[1e-6]
 # wd = [1e-3] #[5e-3]
 # dropout_rate = [0.5]
 
-batch_size = [40]
+batch_size = [40] #TODO 
 batch_size_valid = 2
 # joint_lr_step_size = [2, 5, 10]
 # gamma_value = [0.10, 0.50, 0.25]
@@ -123,6 +134,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
+    early_stop_acc = 0.0
 
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
@@ -209,6 +221,9 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                 
                 ## EARLY STOPPING
                 if ((epoch+1) >= 2*(window)) and ((epoch+1) % window==0):
+                    
+                    early_stop_acc = epoch_acc
+                    
                     loss_npy = np.array(val_loss,dtype=float)
                     windowed = [np.mean(loss_npy[i:i+window]) for i in range(0,len(val_loss),window)]
                     # windowed_epochs = range(window,len(val_loss)+window,window)
@@ -259,6 +274,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
         model.load_state_dict(best_model_wts)
     else:
         model.load_state_dict(model_wts_earlyStopped)
+        best_acc = early_stop_acc
 
     return model, val_acc_history, train_acc_history, val_loss, train_loss, best_acc
 
@@ -524,8 +540,6 @@ for model_name in model_names:
         
        
         experiment_run = f'CBIS_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}_binaryCrossEntr'
-        # experiment_run = f'CBIS_baseline_massCalcification_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}' #TODO
-
         output_dir = f'./saved_models_baseline/{model_name}/{experiment_run}'
         
         if not os.path.exists(output_dir):
@@ -537,6 +551,9 @@ for model_name in model_names:
         
         with open(os.path.join(output_dir,'val_metrics.txt'),'w') as f_out:
             f_out.write('epoch,loss,accuracy\n')
+            
+        with open(os.path.join(output_dir,'run_info.txt'),'w') as f_out:
+             f_out.write(run_info_to_be_written)
         
         
         
