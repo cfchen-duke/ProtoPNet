@@ -15,6 +15,8 @@ add_on_layers_type = 'regular'
 
 data_path = './datasets/' #
 train_dir = data_path + 'push_augmented/' #
+# train_dir = data_path + 'push/' # TODO
+
 
 test_dir = data_path + 'valid' #'valid/' #
 # test_dir = data_path + 'valid_augmented' #'valid/' #
