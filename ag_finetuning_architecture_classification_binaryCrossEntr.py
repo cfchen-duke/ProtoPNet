@@ -321,7 +321,8 @@ def set_parameter_requires_grad(model, feature_extracting, num_layers_to_train):
         model_copy = copy.deepcopy(model)
         
         for name,child in model_copy.named_modules():
-            # print(f'Name: {name}; Child: {child}\n')
+            splits = name.split('.')
+            
             if is_first_time:
                 is_first_time = False
                 for param in child.parameters(): #first, freeze all the layers from the top
@@ -334,20 +335,20 @@ def set_parameter_requires_grad(model, feature_extracting, num_layers_to_train):
                 for param in child.parameters():
                     param.requires_grad = True 
                     
-                if isinstance(child,nn.Conv2d):
+                if isinstance(child,nn.Conv2d) and splits[-1]=='conv1': #TODO conv1
                     new_module = nn.Sequential(
                         child,
                         nn.Dropout2d(p=dropout_rate))
 
                     
-                    splits = name.split('.')
+                    
                     if len(splits)==1:
                         setattr(model, name, new_module)
                     elif len(splits)==3:
                         setattr(getattr(model,splits[0])[int(splits[1])], splits[2], new_module)
-                    #
-                    elif len(splits)==4:
-                        setattr(getattr(getattr(model,splits[0])[int(splits[1])],splits[2]), splits[3], new_module)
+                    # #
+                    # elif len(splits)==4:
+                    #     setattr(getattr(getattr(model,splits[0])[int(splits[1])],splits[2]), splits[3], new_module)
 
     
                 
