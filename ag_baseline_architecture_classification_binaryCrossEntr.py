@@ -62,7 +62,7 @@ parse.add_argument('run_info', help='Plain-text string of information about the 
 
 args = parse.parse_args()
 
-model_names = [args.model_name+f'_esperimenti_sistematici_{img_size}_clahe']#TODO clahe?
+model_names = [args.model_name+f'_esperimenti_sistematici_{img_size}']#TODO clahe?
 lr = [args.lr]
 wd = [args.wd]
 dropout_rate = [args.dr]
@@ -234,7 +234,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                     
                     if prima_volta:
                         prima_volta = False
-                        thresh = deriv_w[0]*0.10 #TODO
+                        thresh = deriv_w[0]*0.10 
                     
                     if deriv_w[-1] < thresh:
                         print(f'DETECTION DI VALORE SOTTOSOGLIA, con soglia {thresh}')
@@ -286,7 +286,7 @@ def set_parameter_requires_grad(model, feature_extracting):
     if feature_extracting:
         for param in model.parameters():
             param.requires_grad = False
-            
+           
             
 
 def initialize_model(model_name, num_classes, feature_extract, dropout_rate, num_dropouts, use_pretrained=True):
@@ -303,7 +303,7 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, num
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
-        ##TODO 11 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
+        #TODO 11 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
         if num_dropouts==1:
             model_ft.fc = nn.Sequential(
     
@@ -392,7 +392,7 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, num
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
-        ##TODO 8 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
+        #TODO 8 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
         model_ft.fc = nn.Sequential(
 
             #Fully connected
@@ -524,8 +524,6 @@ chosen_configurations = get_N_HyperparamsConfigs(N=N) #TODO
 
 for model_name in model_names:
 # for model_name in ['resnet50']:
-#for model_name in ['resnet18']: ##TODO 8 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
-#for model_name in ['resnet34']: ##TODO 8 aprile 2022: idea di semplificare la base architecture per ridurre il numero di out_features uscente e di conseguenza il numero di filtri necessari ai successivi layer FC
 
 
     print(f'-------------MODEL: {model_name} ----------------------------')
@@ -640,9 +638,6 @@ for model_name in model_names:
                 out_file.write('{experiment_run},{lr},{wd},{dropout_rate},{num_dropouts},{batch_size},{best_accuracy}\n')
 
         with open(f'./saved_models_baseline/{model_name}/experiments_setup_massBenignMalignant.txt', 'a') as out_file: #TODO ricordati di cambiare il nome del txt se cambia esperimento
-
-        # with open(f'./saved_models_baseline/{model_name}/experiments_setup_massCalcification.txt', 'a') as out_file: #TODO ricordati di cambiare il nome del txt se cambia esperimento
-            # out_file.write(f'{experiment_run},{lr},{wd},{joint_lr_step_size},{gamma_value},{img_size},{num_classes},{train_batch_size},{test_batch_size},{num_train_epochs},{best_accuracy}\n')
             out_file.write(f'{experiment_run},{lr},{wd},{dropout_rate},{num_dropouts},{batch_size},{best_accuracy}\n')
 
         
