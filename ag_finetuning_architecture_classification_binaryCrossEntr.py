@@ -85,14 +85,14 @@ patience = int(np.ceil(12/window)) #3
 
 print('CUDA visible devices, before and after setting possible multiple GPUs (sanity check):')
 # print(os.environ['CUDA_VISIBLE_DEVICES'])
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2' #TODO
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1' #TODO
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 print(os.environ['CUDA_VISIBLE_DEVICES'])
 
 os_env_cudas = os.environ['CUDA_VISIBLE_DEVICES']
 os_env_cudas_splits = os_env_cudas.split(sep=',')
-# workers = 4*len(os_env_cudas_splits) #TODO METTERE 4* QUANDO POSSIBILE
-workers=8 #TODO
+workers = 4*len(os_env_cudas_splits) #TODO METTERE 4* QUANDO POSSIBILE
+
 
 import random
 torch.cuda.empty_cache()
