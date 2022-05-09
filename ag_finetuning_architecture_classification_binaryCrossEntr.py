@@ -26,14 +26,7 @@ from time import gmtime,strftime
 
 data_path = os.path.join(os.getcwd(),'datasets') #
 train_dir = os.path.join(data_path,'push_augmented') #
-# train_dir = data_path + 'push/' # TODO
-
-
 test_dir = os.path.join(data_path,'valid') #'valid/' #
-# test_dir = data_path + 'valid_augmented' #'valid/' #
-# test_dir = data_path + 'test/' #'valid/' #TODO
-
-
 
 #TODO prenderli corretamente col rispettivo valore calcolato:
 # mean = np.float32(np.uint8(np.load(os.path.join(data_path,'mean.npy')))/255)
@@ -58,19 +51,20 @@ parse.add_argument('num_layers_to_train', help='Number of contigual conv2d layer
 parse.add_argument('lr', help='learning rate',type=float)
 parse.add_argument('wd', help='weight decay',type=float)
 parse.add_argument('dr', help='dropout rate',type=float)
-parse.add_argument('num_dropouts',help='Number of dropout layers in the bottleneck of ResNet18, if 1 uses one, if 2 uses two.', type=int)
+# parse.add_argument('num_dropouts',help='Number of dropout layers in the bottleneck of ResNet18, if 1 uses one, if 2 uses two.', type=int)
 #Add string of information about the specific experiment run, as dataset used, images specification, etc
 parse.add_argument('run_info', help='Plain-text string of information about the specific experiment run, as the dataset used, the images specification, etc. This is saved in run_info.txt',type=str)
 
 args = parse.parse_args()
 
 num_layers_to_train = args.num_layers_to_train
-model_names = [args.model_name+f'_finetuning_last_{num_layers_to_train}_layers_{img_size}_imgsize']#TODO clahe?
+actual_model_name = args.model_name
+model_names = [actual_model_name+f'_finetuning_last_{num_layers_to_train}_layers_{img_size}_imgsize']#TODO clahe?
 
 lr = [args.lr]
 wd = [args.wd]
 dropout_rate = [args.dr]
-num_dropouts = args.num_dropouts
+# num_dropouts = args.num_dropouts
 run_info_to_be_written = args.run_info
 
 # lr=[1e-6]
@@ -90,15 +84,15 @@ patience = int(np.ceil(12/window)) #3
 
 
 print('CUDA visible devices, before and after setting possible multiple GPUs (sanity check):')
-print(os.environ['CUDA_VISIBLE_DEVICES'])
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1' #TODO
+# print(os.environ['CUDA_VISIBLE_DEVICES'])
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2' #TODO
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 print(os.environ['CUDA_VISIBLE_DEVICES'])
 
 os_env_cudas = os.environ['CUDA_VISIBLE_DEVICES']
 os_env_cudas_splits = os_env_cudas.split(sep=',')
-workers = 4*len(os_env_cudas_splits)
-
+# workers = 4*len(os_env_cudas_splits) #TODO METTERE 4* QUANDO POSSIBILE
+workers=8 #TODO
 
 import random
 torch.cuda.empty_cache()
@@ -313,58 +307,92 @@ def set_parameter_requires_grad(model, feature_extracting, num_layers_to_train):
         for child in model.modules():
             if isinstance(child,nn.Conv2d):
                 t+=1
+                
         print(f'Conv2d layers re-trained in the model: {num_layers_to_train}/{t}')
         
         c = 0
+        c_dropout = 0
         is_first_time = True
         
-        model_copy = copy.deepcopy(model)
-        
-        for name,child in model_copy.named_modules():
+        #
+        for name,child in model.named_modules():
             splits = name.split('.')
             
             if is_first_time:
                 is_first_time = False
+                ## TODO: Versione tutta congelata e alcuni decongelati
                 for param in child.parameters(): #first, freeze all the layers from the top
+                   
                     param.requires_grad = False
+   
+                    
+                # ## TODO: Versione tutta viene riallenata
+                # for param in child.parameters():
+                #     if param.requires_grad is not True:
+                #         print(f'{name} non era TRUE')
+                #         param.requires_grad = True
                 
             if isinstance(child,nn.Conv2d):
                 c+=1
             
+            assert(t>=num_layers_to_train)
+            
             if c > t - num_layers_to_train: #un-freeze all the following layers (conv2d & bn)
                 for param in child.parameters():
                     param.requires_grad = True 
-                    
-                if isinstance(child,nn.Conv2d) and splits[-1]=='conv1': #TODO conv1
-                    new_module = nn.Sequential(
-                        child,
-                        nn.Dropout2d(p=dropout_rate))
+        #
+        
+        
+        
+        # model_copy = copy.deepcopy(model)
+        
+        # for name,child in model_copy.named_modules():
+        #     splits = name.split('.')
 
-                    
-                    
-                    if len(splits)==1:
-                        setattr(model, name, new_module)
-                    elif len(splits)==3:
-                        setattr(getattr(model,splits[0])[int(splits[1])], splits[2], new_module)
-                    # #
-                    # elif len(splits)==4:
-                    #     setattr(getattr(getattr(model,splits[0])[int(splits[1])],splits[2]), splits[3], new_module)
-
-    
                 
+        #     if isinstance(child,nn.Conv2d):
+        #         c+=1
+            
+        #     assert(t>=num_layers_to_train)
+            
+        #     if c > t - num_layers_to_train: #un-freeze all the following layers (conv2d & bn)
+                    
+        #         # if isinstance(child,nn.Conv2d) and splits[-1]=='conv1': #TODO conv1
+                   
+        #         #     c_dropout += 1
+                    
+        #         #     # if c_dropout <= 3: #TODO i primi 3
+        #         #     #     new_module = nn.Sequential(
+        #         #     #             child,
+        #         #     #             nn.Dropout2d(p=dropout_rate))
+    
+        #         #     #     if len(splits)==1:
+        #         #     #         setattr(model, name, new_module)
+        #         #     #     elif len(splits)==3:
+        #         #     #         setattr(getattr(model,splits[0])[int(splits[1])], splits[2], new_module)
+        #         #     #     # #
+        #         #     #     # elif len(splits)==4:
+        #         #     #     #     setattr(getattr(getattr(model,splits[0])[int(splits[1])],splits[2]), splits[3], new_module)
+                    
+        #         #     if c_dropout > 9 - 3: # hardcode 9 e 3; TODO gli ultimi 3
+        #         #         new_module = nn.Sequential(
+        #         #                 child,
+        #         #                 nn.Dropout2d(p=dropout_rate))
+    
+        #         #         if len(splits)==1:
+        #         #             setattr(model, name, new_module)
+        #         #         elif len(splits)==3:
+        #         #             setattr(getattr(model,splits[0])[int(splits[1])], splits[2], new_module)      
+      
+                  
         # ## Versione iniziale:
         # for param in model.parameters():
         #     param.requires_grad = False
         
-        # # Versione dove si riallena tutta:
-        # for param in model.parameters():
-        #     if param.requires_grad != True:
-        #         print(f'Non era true')
-        #     param.requires_grad = True
            
             
-
-def initialize_model(model_name, num_classes, feature_extract, dropout_rate, num_dropouts, num_layers_to_train, use_pretrained=True):
+def initialize_model(model_name, num_classes, feature_extract, dropout_rate, num_layers_to_train, use_pretrained=True):
+# def initialize_model(model_name, num_classes, feature_extract, dropout_rate, num_dropouts, num_layers_to_train, use_pretrained=True):
     # Initialize these variables which will be set in this if statement. Each of these
     #   variables is model specific.
     model_ft = None
@@ -610,24 +638,18 @@ def initialize_model(model_name, num_classes, feature_extract, dropout_rate, num
         
     #     input_size = img_size  
     
-    # elif model_name == "vgg19":
-    #     """ VGG19
-    #     """
-    #     model_ft = models.vgg19(pretrained=use_pretrained)
-    #     set_parameter_requires_grad(model_ft, feature_extract, num_layers_to_train)
-    #     num_ftrs = model_ft.classifier[6].in_features
-    #     model_ft.classifier[6] = nn.Linear(num_ftrs,num_classes)
-    #     input_size = 224
+    if model_name == "vgg19":
+        """ VGG19
+        """
+        model_ft = models.vgg19(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract, num_layers_to_train)
+        num_ftrs = model_ft.classifier[6].in_features
+        model_ft.classifier[6] = nn.Sequential(
+            nn.Linear(num_ftrs,num_classes),
+            nn.Sigmoid()
+            )
+        input_size = img_size
         
-    
-    # elif model_name == "densenet121":
-    #     """ Densenet121
-    #     """
-    #     model_ft = models.densenet121(pretrained=use_pretrained)
-    #     set_parameter_requires_grad(model_ft, feature_extract, num_layers_to_train)
-    #     num_ftrs = model_ft.classifier.in_features
-    #     model_ft.classifier = nn.Linear(num_ftrs, num_classes)
-    #     input_size = 224
 
 
     return model_ft, input_size
@@ -655,7 +677,7 @@ for model_name in model_names:
         test_batch_size = batch_size_valid
         
        
-        experiment_run = f'CBIS_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}_binaryCrossEntr'
+        experiment_run = f'CBIS_{model_name}_{strftime("%a_%d_%b_%Y_%H:%M:%S", gmtime())}'
         output_dir = f'./saved_models_baseline/{model_name}/{experiment_run}'
         
         if not os.path.exists(output_dir):
@@ -680,14 +702,14 @@ for model_name in model_names:
         train_dataset = datasets.ImageFolder(
             train_dir,
             transforms.Compose([
-                transforms.Grayscale(num_output_channels=3), #TODO
+                transforms.Grayscale(num_output_channels=3),
                 transforms.Resize(size=(img_size, img_size)),
                 transforms.ToTensor(),
                 normalize,
             ]))
         train_loader = torch.utils.data.DataLoader(
             train_dataset, batch_size=train_batch_size, shuffle=True,
-            num_workers=workers, pin_memory=False) #TODO cambiare num_workers=4*num_gpu
+            num_workers=workers, pin_memory=False)
 
         # test set
         test_dataset = datasets.ImageFolder(
@@ -718,8 +740,9 @@ for model_name in model_names:
         
         #print(f'model_name={model_name[:9]}')
         # Initialize the model for this run
-        model_ft, input_size = initialize_model(model_name[:8], num_classes, feature_extract, dropout_rate, num_dropouts, num_layers_to_train, use_pretrained=True) #TODO modelname
-        
+        # model_ft, input_size = initialize_model(actual_model_name, num_classes, feature_extract, dropout_rate, num_dropouts, num_layers_to_train, use_pretrained=True)
+        model_ft, input_size = initialize_model(actual_model_name, num_classes, feature_extract, dropout_rate, num_layers_to_train, use_pretrained=True)
+
         with open(os.path.join(output_dir,'model_architecture.txt'),'w') as f_out:
             f_out.write(f'{model_ft}')
  
@@ -756,6 +779,8 @@ for model_name in model_names:
         model_ft, val_accs, train_accs, val_loss, train_loss, best_accuracy= train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs, is_inception=(model_name=="inception"),window=window, patience=patience)
         
         #
+        
+        num_dropouts=999 #fake number to exclude num_dropouts in further experiments...
         if not os.path.exists(f'./saved_models_baseline/{model_name}/experiments_setup_massBenignMalignant.txt'):
             with open(f'./saved_models_baseline/{model_name}/experiments_setup_massBenignMalignant.txt', 'w') as out_file:
                 out_file.write('{experiment_run},{num_layers_to_train},{lr},{wd},{dropout_rate},{num_dropouts},{batch_size},{best_accuracy}\n')
@@ -776,7 +801,7 @@ for model_name in model_names:
         # plt.ylim(bottom=0.5,top=1)
         plt.legend()
         b_acc = best_accuracy
-        plt.title(f'Accuracy\n{model_name[:8]}; BCE Loss; last {num_layers_to_train} conv layers trained\nLR: {lr}, WD: {wd}, dropout: {dropout_rate},\nbest val acc: {np.round(b_acc,decimals=2)}, batch size: {batch_size}')
+        plt.title(f'Accuracy\n{actual_model_name}; BCE Loss; last {num_layers_to_train} conv layers trained\nLR: {lr}, WD: {wd}, dropout: {dropout_rate},\nbest val acc: {np.round(b_acc,decimals=2)}, batch size: {batch_size}')
         plt.xlabel('Epochs')
         plt.ylabel('Accuracy')
         plt.grid()
@@ -792,7 +817,7 @@ for model_name in model_names:
         plt.plot(x_axis,val_loss,'*-b',label='Validation')
         # plt.ylim(bottom=-0.5)
         plt.legend()
-        plt.title(f'Loss\n{model_name[:8]}; BCE Loss; last {num_layers_to_train} conv layers trained\nLR: {lr}, WD: {wd}, dropout: {dropout_rate}, batch size: {batch_size}')
+        plt.title(f'Loss\n{actual_model_name}; BCE Loss; last {num_layers_to_train} conv layers trained\nLR: {lr}, WD: {wd}, dropout: {dropout_rate}, batch size: {batch_size}')
         plt.xlabel('Epochs')
         plt.ylabel('Loss')
         plt.grid()
