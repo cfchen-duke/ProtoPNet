@@ -115,3 +115,8 @@ previous_datasets/
 invettiva/
 other_datasets/
 saved_models_baseline/
+datasets_crop600/
+
+# py scripts (custom)
+ag_finetuning_architecture_classification_binaryCrossEntr_crop600.py
+ag_finetuning_architecture_classification_binaryCrossEntr_tmp2.py
