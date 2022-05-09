@@ -5,6 +5,7 @@ import time
 import torch
 import torch.utils.data
 # import torch.utils.data.distributed
+# from torch.nn.parallel import DistributedDataParallel as ddp
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 
@@ -41,6 +42,12 @@ def main():
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid[0] #TODO
     print(os.environ['CUDA_VISIBLE_DEVICES'])
+    
+    
+    os_env_cudas = os.environ['CUDA_VISIBLE_DEVICES']
+    os_env_cudas_splits = os_env_cudas.split(sep=',')
+    workers = 4*len(os_env_cudas_splits) #TODO METTERE 4* QUANDO POSSIBILE
+    
     
     # book keeping namings and code
     from settings import base_architecture, img_size, prototype_shape, num_classes, \
@@ -86,7 +93,7 @@ def main():
         ]))
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=train_batch_size, shuffle=True,
-        num_workers=4, pin_memory=False) #TODO cambiare num_workers=4*num_gpu
+        num_workers=workers, pin_memory=False) #TODO cambiare num_workers=4*num_gpu
     # push set
     train_push_dataset = datasets.ImageFolder(
         train_push_dir,
@@ -97,7 +104,7 @@ def main():
         ]))
     train_push_loader = torch.utils.data.DataLoader(
         train_push_dataset, batch_size=train_push_batch_size, shuffle=False,
-        num_workers=4, pin_memory=False)
+        num_workers=workers, pin_memory=False)
     # test set
     test_dataset = datasets.ImageFolder(
         test_dir,
@@ -109,7 +116,7 @@ def main():
         ]))
     test_loader = torch.utils.data.DataLoader(
         test_dataset, batch_size=test_batch_size, shuffle=True, #TODO messo True, era falso
-        num_workers=4, pin_memory=False)
+        num_workers=workers, pin_memory=False)
     
     # we should look into distributed sampler more carefully at torch.utils.data.distributed.DistributedSampler(train_dataset)
     log('training set size: {0}'.format(len(train_loader.dataset)))
@@ -130,10 +137,16 @@ def main():
     
     #if prototype_activation_function == 'linear':
     #    ppnet.set_last_layer_incorrect_connection(incorrect_strength=0)
+    
+    with open(os.path.join(model_dir,'architecture.txt'),'w') as fout:
+        fout.write(f'{ppnet}')
+        
     ppnet = ppnet.cuda()
-    ppnet_multi = torch.nn.DataParallel(ppnet) #TODO usare invece DistributedDataParallel!
+    ppnet_multi = torch.nn.DataParallel(ppnet)
     class_specific = True
     
+
+        
     # define optimizer
     from settings import joint_optimizer_lrs, joint_lr_step_size
     joint_optimizer_specs = \
@@ -142,7 +155,7 @@ def main():
      {'params': ppnet.prototype_vectors, 'lr': joint_optimizer_lrs['prototype_vectors']},
     ]
     joint_optimizer = torch.optim.Adam(joint_optimizer_specs)
-    joint_lr_scheduler = torch.optim.lr_scheduler.StepLR(joint_optimizer, step_size=joint_lr_step_size, gamma=0.1)
+    # joint_lr_scheduler = torch.optim.lr_scheduler.StepLR(joint_optimizer, step_size=joint_lr_step_size, gamma=0.1)
     
     from settings import warm_optimizer_lrs
     warm_optimizer_specs = \
@@ -173,14 +186,14 @@ def main():
                           class_specific=class_specific, coefs=coefs, log=log)
         else:
             tnt.joint(model=ppnet_multi, log=log)
-            joint_lr_scheduler.step()
+            # joint_lr_scheduler.step()
             _ = tnt.train(model=ppnet_multi, dataloader=train_loader, optimizer=joint_optimizer,
                           class_specific=class_specific, coefs=coefs, log=log)
     
         accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
                         class_specific=class_specific, log=log)
         save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'nopush', accu=accu,
-                                    target_accu=0.50, log=log)
+                                    target_accu=0.55, log=log)
     
         if epoch >= push_start and epoch in push_epochs:
             push.push_prototypes(
@@ -199,7 +212,7 @@ def main():
             accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
                             class_specific=class_specific, log=log)
             save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'push', accu=accu,
-                                        target_accu=0.50, log=log)
+                                        target_accu=0.55, log=log)
     
             if prototype_activation_function != 'linear':
                 tnt.last_only(model=ppnet_multi, log=log)
@@ -210,7 +223,7 @@ def main():
                     accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
                                     class_specific=class_specific, log=log)
                     save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + '_' + str(i) + 'push', accu=accu,
-                                                target_accu=0.50, log=log)
+                                                target_accu=0.55, log=log)
        
     logclose()
     stop = time.time()
