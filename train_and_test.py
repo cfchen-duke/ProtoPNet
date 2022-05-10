@@ -2,6 +2,7 @@ import time
 import torch
 from tqdm import tqdm
 from helpers import list_of_distances, make_one_hot
+import numpy as np
 
 def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l1_mask=True,
                    coefs=None, log=print):
@@ -20,6 +21,8 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
     # separation cost is meaningful only for class_specific
     total_separation_cost = 0
     total_avg_separation_cost = 0
+    
+    losses_list = []
 
     for i, (image, label) in enumerate(tqdm(dataloader)):
         input = image.cuda()
@@ -84,23 +87,27 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
             total_separation_cost += separation_cost.item()
             total_avg_separation_cost += avg_separation_cost.item()
 
+        loss=0
+        if class_specific:
+            if coefs is not None:
+                loss = (coefs['crs_ent'] * cross_entropy
+                      + coefs['clst'] * cluster_cost
+                      + coefs['sep'] * separation_cost
+                      + coefs['l1'] * l1)
+            else:
+                loss = cross_entropy + 0.8 * cluster_cost - 0.08 * separation_cost + 1e-4 * l1
+        else:
+            if coefs is not None:
+                loss = (coefs['crs_ent'] * cross_entropy
+                      + coefs['clst'] * cluster_cost
+                      + coefs['l1'] * l1)
+            else:
+                loss = cross_entropy + 0.8 * cluster_cost + 1e-4 * l1
+        
+        losses_list.append(loss.item())
+        ##TODO spostato questo controllo (IF) dalla linea prima di classspecific
         # compute gradient and do SGD step
         if is_train:
-            if class_specific:
-                if coefs is not None:
-                    loss = (coefs['crs_ent'] * cross_entropy
-                          + coefs['clst'] * cluster_cost
-                          + coefs['sep'] * separation_cost
-                          + coefs['l1'] * l1)
-                else:
-                    loss = cross_entropy + 0.8 * cluster_cost - 0.08 * separation_cost + 1e-4 * l1
-            else:
-                if coefs is not None:
-                    loss = (coefs['crs_ent'] * cross_entropy
-                          + coefs['clst'] * cluster_cost
-                          + coefs['l1'] * l1)
-                else:
-                    loss = cross_entropy + 0.8 * cluster_cost + 1e-4 * l1
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -112,6 +119,7 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
         del min_distances
 
     end = time.time()
+    losses_array = np.array(losses_list)
 
     log('\ttime: \t{0}'.format(end -  start))
     log('\tcross ent: \t{0}'.format(total_cross_entropy / n_batches))
@@ -126,7 +134,7 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
         p_avg_pair_dist = torch.mean(list_of_distances(p, p))
     log('\tp dist pair: \t{0}'.format(p_avg_pair_dist.item()))
 
-    return n_correct / n_examples
+    return n_correct / n_examples, np.mean(losses_array)
 
 
 def train(model, dataloader, optimizer, class_specific=False, coefs=None, log=print):

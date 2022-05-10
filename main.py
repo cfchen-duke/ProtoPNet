@@ -23,6 +23,7 @@ from preprocess import mean, std, preprocess_input_function
 
 import numpy as np
 import random
+from matplotlib import pyplot as plt
 
 torch.cuda.empty_cache()
 #%% SEED FIXED TO FOSTER REPRODUCIBILITY
@@ -37,8 +38,10 @@ def main():
     start = time.time()
     set_seed(seed=1)
     parser = argparse.ArgumentParser()
-    parser.add_argument('-gpuid', nargs=1, type=str, default='0') #TODO
+    parser.add_argument('gpuid', nargs=1, type=str) #TODO
     # python3 main.py -gpuid=0,1,2,3
+    parser.add_argument('runinfo', nargs=1, type=str) #TODO
+
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid[0] #TODO
     print(os.environ['CUDA_VISIBLE_DEVICES'])
@@ -58,6 +61,10 @@ def main():
     
     model_dir = './saved_models/' + base_architecture + '/' + experiment_run + '/'
     makedir(model_dir)
+    ##TODO scrittura di un file di informazioni sulla run in oggetto
+    with open(os.path.join(model_dir,'run_info.txt'),'w') as fout:
+        fout.write(f'{args.runinfo}')
+    #
     shutil.copy(src=os.path.join(os.getcwd(), __file__), dst=model_dir)
     shutil.copy(src=os.path.join(os.getcwd(), 'settings.py'), dst=model_dir)
     shutil.copy(src=os.path.join(os.getcwd(), base_architecture_type + '_features.py'), dst=model_dir)
@@ -152,8 +159,8 @@ def main():
             if isinstance(m,torch.nn.Sequential):
                 fout.write(f'{m}\n')
             
-        for m in ppnet.prototype_vectors.modules():
-            fout.write(f'{m}\n')
+        # for m in ppnet.prototype_vectors.modules():
+        #     fout.write(f'{m}\n')
             
         for m in ppnet.last_layer.modules():
             fout.write(f'{m}\n')
@@ -193,26 +200,64 @@ def main():
     
     # train the model
     log('start training')
-    import copy
+    # import copy
+    
+    #
+    accs_noiter_valid = []
+    losses_noiter_valid = []
+    accs_noiter_train = []
+    losses_noiter_train = []
+    triggered_count = 0
+    earlystopped_acc = 0
+    best_acc = 0
+    #
     for epoch in range(num_train_epochs):
         log('epoch: \t{0}'.format(epoch))
-    
+        
+        
+
         if epoch < num_warm_epochs:
             tnt.warm_only(model=ppnet_multi, log=log)
-            _ = tnt.train(model=ppnet_multi, dataloader=train_loader, optimizer=warm_optimizer,
+            accu_train,loss_train = tnt.train(model=ppnet_multi, dataloader=train_loader, optimizer=warm_optimizer,
                           class_specific=class_specific, coefs=coefs, log=log)
         else:
             tnt.joint(model=ppnet_multi, log=log)
             # joint_lr_scheduler.step()
-            _ = tnt.train(model=ppnet_multi, dataloader=train_loader, optimizer=joint_optimizer,
+            accu_train,loss_train = tnt.train(model=ppnet_multi, dataloader=train_loader, optimizer=joint_optimizer,
                           class_specific=class_specific, coefs=coefs, log=log)
     
-        accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
+        accu, loss = tnt.test(model=ppnet_multi, dataloader=test_loader,
                         class_specific=class_specific, log=log)
+        
+        accs_noiter_valid.append(accu)
+        losses_noiter_valid.append(loss)
+        accs_noiter_train.append(accu_train)
+        losses_noiter_train.append(loss_train)
+        
         save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'nopush', accu=accu,
-                                    target_accu=0.55, log=log)
+                                    target_accu=0.68, log=log)
     
         if epoch >= push_start and epoch in push_epochs:
+            
+            loss_npy = np.array(losses_noiter_valid)
+            window=5 #TODO
+            ultimo = np.mean(loss_npy[-window:])
+            penultimo = np.mean(loss_npy[-2*window:-window])
+            
+            if ultimo-penultimo >= 0:
+                triggered_count+=1 #set
+                
+            elif ultimo-penultimo < 0:
+                #reset
+                triggered_count=0 
+           
+            if triggered_count==2:
+                # Pazienza di un push da quando si triggera la prima volta
+                # a quando esco. Così, l'ultima cartella di immagini salvate
+                # è proprio quella relativa al push triggerante la prima volta.
+                log(f'Early stopping at epoch {epoch}-------------------------')
+                break
+                        
             push.push_prototypes(
                 train_push_loader, # pytorch dataloader (must be unnormalized in [0,1])
                 prototype_network_parallel=ppnet_multi, # pytorch network with prototype_vectors
@@ -226,21 +271,36 @@ def main():
                 proto_bound_boxes_filename_prefix=proto_bound_boxes_filename_prefix,
                 save_prototype_class_identity=True,
                 log=log)
-            accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
+            
+            accu,loss = tnt.test(model=ppnet_multi, dataloader=test_loader,
                             class_specific=class_specific, log=log)
-            save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'push', accu=accu,
-                                        target_accu=0.55, log=log)
-    
+            
+            accs_noiter_valid.append(accu)
+            losses_noiter_valid.append(loss)
+            # Copiamo lo stesso valore del training per la push epoch:
+            accs_noiter_train.append(accu_train)
+            losses_noiter_train.append(loss_train)  
+            
+            if triggered_count==1:
+                earlystopped_acc = accu  
+                best_acc = earlystopped_acc
+                save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'push', accu=earlystopped_acc,
+                                            target_accu=0.50, log=log)
+            
+            
+            
             if prototype_activation_function != 'linear':
                 tnt.last_only(model=ppnet_multi, log=log)
                 for i in range(20):
                     log('iteration: \t{0}'.format(i))
-                    _ = tnt.train(model=ppnet_multi, dataloader=train_loader, optimizer=last_layer_optimizer,
+                    _,_ = tnt.train(model=ppnet_multi, dataloader=train_loader, optimizer=last_layer_optimizer,
                                   class_specific=class_specific, coefs=coefs, log=log)
-                    accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
+                    accu,_ = tnt.test(model=ppnet_multi, dataloader=test_loader,
                                     class_specific=class_specific, log=log)
-                    save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + '_' + str(i) + 'push', accu=accu,
-                                                target_accu=0.55, log=log)
+                    if accu > best_acc:
+                        best_acc = accu
+                        save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + '_' + str(i) + 'push', accu=best_acc,
+                                                target_accu=0.50, log=log)
        
     logclose()
     stop = time.time()
@@ -250,7 +310,42 @@ def main():
     coeff_clst = coefs['clst']
     coeff_sep = coefs['sep']
     
+    accs_noiter_train_npy = np.array(accs_noiter_train)
+    np.save(os.path.join(model_dir,'npy_accs_noiter_train.npy'),accs_noiter_train_npy)
+
+    accs_noiter_valid_npy = np.array(accs_noiter_valid)
+    np.save(os.path.join(model_dir,'npy_accs_noiter_valid.npy'),accs_noiter_valid_npy)
+
+    losses_noiter_train_npy = np.array(losses_noiter_train)
+    np.save(os.path.join(model_dir,'npy_loss_noiter_train.npy'),losses_noiter_train_npy)
+
+    losses_noiter_valid_npy = np.array(losses_noiter_valid)
+    np.save(os.path.join(model_dir,'npy_loss_noiter_valid.npy'),losses_noiter_valid_npy)
+
     
+    x_axis = range(0,len(accs_noiter_valid))
+    plt.figure()
+    plt.plot(x_axis, accs_noiter_train,'*-k',label='Training')
+    plt.plot(x_axis,accs_noiter_valid,'*-b',label='Validation')
+    # plt.ylim(bottom=0.5,top=1)
+    plt.legend()
+    plt.title(f'Accuracy {base_architecture}, earlyStAcc:{earlystopped_acc}, bestAcc:{best_acc}, imgSize:{img_size}, protPerClass:{num_prots_per_class}, numFilters:{num_filters}\ndropout:{dropout_proportion}, trainBSize:{train_batch_size}, testBSize:{test_batch_size}, pushBSize:{train_push_batch_size}, CE:{coeff_crs_ent}, CLS:{coeff_clst}, SEP:{coeff_sep}')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.grid()
+    plt.savefig(os.path.join(model_dir,'acc_noiter.pdf'))
+    
+    plt.figure()
+    plt.plot(x_axis, losses_noiter_train,'*-k',label='Training')
+    plt.plot(x_axis,losses_noiter_valid,'*-b',label='Validation')
+    # plt.ylim(bottom=0.5,top=1)
+    plt.legend()
+    plt.title(f'Loss {base_architecture}\nimgSize:{img_size}, protPerClass:{num_prots_per_class}, numFilters:{num_filters}, dropout:{dropout_proportion}\ntrainBSize:{train_batch_size}, testBSize:{test_batch_size}, pushBSize:{train_push_batch_size}\nCE:{coeff_crs_ent}, CLS:{coeff_clst}, SEP:{coeff_sep}')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.grid()
+    plt.savefig(os.path.join(model_dir,'loss_noiter.pdf'))
+
     
     with open('./saved_models/experiments_setup.txt', 'a') as out_file:
         out_file.write(f'{experiment_run},{base_architecture},{img_size},{num_classes},{num_prots_per_class},{num_filters},{train_batch_size},{test_batch_size},{train_push_batch_size},{coeff_crs_ent},{coeff_clst},{coeff_sep},{num_warm_epochs},{num_train_epochs},{dropout_proportion},{run_time}\n')
