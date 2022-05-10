@@ -29,7 +29,7 @@ train_batch_size = 40 #25 #50 #35 #80 #20 #30 #25 #12 #20 #
 test_batch_size = 2 #20 #60 #40 #100 #20 #25 #20 #10 #
 train_push_batch_size = 40 #25 #50 #35 #75 #20 #30 #25 #15 #20 # 10 #
 
-joint_optimizer_lrs = {'features': 1e-06,#1e-4 #TODO
+joint_optimizer_lrs = {'features': 1e-07, #1e-06,#1e-4 #TODO
                        'add_on_layers': 1e-06, #3e-3,
                        'prototype_vectors': 1e-06} #3e-3}
 joint_lr_step_size = 10 #5 #TODO
