@@ -139,7 +139,24 @@ def main():
     #    ppnet.set_last_layer_incorrect_connection(incorrect_strength=0)
     
     with open(os.path.join(model_dir,'architecture.txt'),'w') as fout:
-        fout.write(f'{ppnet}')
+        fout.write(f'{ppnet}\n')
+        at_least_one_sequential = False
+        for m in ppnet.features.modules():
+            if isinstance(m,torch.nn.Sequential):
+                at_least_one_sequential = True
+                fout.write(f'{m}\n')
+            if not at_least_one_sequential:
+                fout.write(f'{m}\n')
+                
+        for m in ppnet.add_on_layers.modules():
+            if isinstance(m,torch.nn.Sequential):
+                fout.write(f'{m}\n')
+            
+        for m in ppnet.prototype_vectors.modules():
+            fout.write(f'{m}\n')
+            
+        for m in ppnet.last_layer.modules():
+            fout.write(f'{m}\n')
         
     ppnet = ppnet.cuda()
     ppnet_multi = torch.nn.DataParallel(ppnet)

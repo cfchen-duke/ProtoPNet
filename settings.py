@@ -10,8 +10,10 @@ num_prots_per_class = 10
 num_filters = 512 #256 #128 #256
 prototype_shape = (num_classes*num_prots_per_class, num_filters, 1, 1) #40 #60 #16 #40
 prototype_activation_function = 'log'
-add_on_layers_type = 'regular'
+# add_on_layers_type = 'regular'
+add_on_layers_type = 'bottleneck'
 
+dropout_proportion = 0.4 #TODO aggiunto noi
 
 data_path = './datasets/' #
 train_dir = data_path + 'push_augmented/' #

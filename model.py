@@ -30,7 +30,7 @@ base_architecture_to_features = {'resnet18': resnet18_features,
 
 
 #
-dropout_proportion = 0
+from settings import dropout_proportion
 #
 
 
@@ -90,32 +90,41 @@ class PPNet(nn.Module):
            
             
             while (current_in_channels > self.prototype_shape[1]) or (len(add_on_layers) == 0):
+                
                 current_out_channels = max(self.prototype_shape[1], (current_in_channels // 2))
+                
                 add_on_layers.append(nn.Conv2d(in_channels=current_in_channels,
                                                 out_channels=current_out_channels,
                                                 kernel_size=1))
-                ## TODO versione nostra con aggiunta dei Dropout
-                add_on_layers.append(nn.Dropout(p=dropout_proportion))
-
+                
+                ##TODO aggiunta batchnorm2d prima della relu
+                add_on_layers.append(nn.BatchNorm2d(current_out_channels))
                 add_on_layers.append(nn.ReLU())
+                
+                ## TODO versione nostra con aggiunta dei Dropout dopo la relu
+                add_on_layers.append(nn.Dropout2d(p=dropout_proportion))
+                #
+                
                 add_on_layers.append(nn.Conv2d(in_channels=current_out_channels,
                                                 out_channels=current_out_channels,
                                                 kernel_size=1))
-                
+                ##TODO aggiunta batchnorm2d prima della activation function
+                add_on_layers.append(nn.BatchNorm2d(current_out_channels))
                
                 
-                if current_out_channels > self.prototype_shape[1]:
-                    # add_on_layers.append(nn.ReLU()) #original version
+                if current_out_channels > self.prototype_shape[1]:                   
                     
-                    ## TODO versione nostra con aggiunta dei Dropout
-                    add_on_layers.append(nn.Dropout(p=dropout_proportion))
                     add_on_layers.append(nn.ReLU())
+                    ## TODO versione nostra con aggiunta dei Dropout dopo la relu
+                    add_on_layers.append(nn.Dropout2d(p=dropout_proportion))
                     #
                     
                 else:
                     assert(current_out_channels == self.prototype_shape[1])
                     add_on_layers.append(nn.Sigmoid())
+                    
                 current_in_channels = current_in_channels // 2
+                
             self.add_on_layers = nn.Sequential(*add_on_layers)
         else:
             self.add_on_layers = nn.Sequential(
