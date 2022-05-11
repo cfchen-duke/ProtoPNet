@@ -3,6 +3,7 @@ import torch
 from tqdm import tqdm
 from helpers import list_of_distances, make_one_hot
 import numpy as np
+from settings import num_layers_to_train
 
 def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l1_mask=True,
                    coefs=None, log=print):
@@ -178,8 +179,22 @@ def warm_only(model, log=print):
 
 
 def joint(model, log=print):
-    for p in model.module.features.parameters():
-        p.requires_grad = True
+    t = 0
+    for p in model.module.features.modules():
+        # count the number of conv2d layers in the baseline model
+        if isinstance(p, torch.nn.Conv2d):
+            t += 1
+    c = 0
+    for p in model.module.features.modules():
+        if isinstance(p, torch.nn.Conv2d):
+            c += 1
+        
+        assert(t>=num_layers_to_train)
+        
+        if c > t - num_layers_to_train: #un-freeze all the following layers (conv2d & bn)
+            for param in p.parameters():
+                param.requires_grad = True 
+                
     for p in model.module.add_on_layers.parameters():
         p.requires_grad = True
     model.module.prototype_vectors.requires_grad = True
@@ -187,3 +202,15 @@ def joint(model, log=print):
         p.requires_grad = True
     
     log('\tjoint')
+    log(f'\tConv2d layers re-trained in the model: {num_layers_to_train}/{t}')
+
+# def joint(model, log=print):
+#     for p in model.module.features.parameters():
+#         p.requires_grad = True
+#     for p in model.module.add_on_layers.parameters():
+#         p.requires_grad = True
+#     model.module.prototype_vectors.requires_grad = True
+#     for p in model.module.last_layer.parameters():
+#         p.requires_grad = True
+    
+#     log('\tjoint')
