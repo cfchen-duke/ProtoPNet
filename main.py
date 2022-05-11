@@ -172,10 +172,11 @@ def main():
 
         
     # define optimizer
-    from settings import joint_optimizer_lrs, joint_lr_step_size
+    from settings import joint_optimizer_lrs, joint_lr_step_size, wd
+    
     joint_optimizer_specs = \
-    [{'params': ppnet.features.parameters(), 'lr': joint_optimizer_lrs['features'], 'weight_decay': 1e-3}, # bias are now also being regularized
-     {'params': ppnet.add_on_layers.parameters(), 'lr': joint_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
+    [{'params': ppnet.features.parameters(), 'lr': joint_optimizer_lrs['features'], 'weight_decay': wd}, # bias are now also being regularized
+     {'params': ppnet.add_on_layers.parameters(), 'lr': joint_optimizer_lrs['add_on_layers'], 'weight_decay': wd},
      {'params': ppnet.prototype_vectors, 'lr': joint_optimizer_lrs['prototype_vectors']},
     ]
     joint_optimizer = torch.optim.Adam(joint_optimizer_specs)
@@ -183,7 +184,7 @@ def main():
     
     from settings import warm_optimizer_lrs
     warm_optimizer_specs = \
-    [{'params': ppnet.add_on_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': 1e-3},
+    [{'params': ppnet.add_on_layers.parameters(), 'lr': warm_optimizer_lrs['add_on_layers'], 'weight_decay': wd},
      {'params': ppnet.prototype_vectors, 'lr': warm_optimizer_lrs['prototype_vectors']},
     ]
     warm_optimizer = torch.optim.Adam(warm_optimizer_specs)
@@ -210,6 +211,7 @@ def main():
     triggered_count = 0
     earlystopped_acc = 0
     best_acc = 0
+    first_time = True
     #
     for epoch in range(num_train_epochs):
         log('epoch: \t{0}'.format(epoch))
@@ -222,6 +224,16 @@ def main():
                           class_specific=class_specific, coefs=coefs, log=log)
         else:
             tnt.joint(model=ppnet_multi, log=log)
+            if first_time:
+                first_time = False
+                params_to_update = ppnet_multi.parameters()
+                log("\tParams to learn:")
+                params_to_update = []
+                for name,param in ppnet_multi.named_parameters():
+                    if param.requires_grad == True:
+                        params_to_update.append(param)
+                        log(f"\t\t{name}")
+                
             # joint_lr_scheduler.step()
             accu_train,loss_train = tnt.train(model=ppnet_multi, dataloader=train_loader, optimizer=joint_optimizer,
                           class_specific=class_specific, coefs=coefs, log=log)
@@ -329,7 +341,7 @@ def main():
     plt.plot(x_axis,accs_noiter_valid,'*-b',label='Validation')
     # plt.ylim(bottom=0.5,top=1)
     plt.legend()
-    plt.title(f'Accuracy {base_architecture}, earlyStAcc:{earlystopped_acc}, bestAcc:{best_acc}, imgSize:{img_size}, protPerClass:{num_prots_per_class}, numFilters:{num_filters}\ndropout:{dropout_proportion}, trainBSize:{train_batch_size}, testBSize:{test_batch_size}, pushBSize:{train_push_batch_size}, CE:{coeff_crs_ent}, CLS:{coeff_clst}, SEP:{coeff_sep}')
+    plt.title(f'Accuracy {base_architecture}, earlyStAcc:{np.round(earlystopped_acc, decimals=2)}, bestAcc:{np.round(best_acc, decimals=2)}, imgSize:{img_size}, protPerClass:{num_prots_per_class}, numFilters:{num_filters}\ndropout:{dropout_proportion}, trainBSize:{train_batch_size}, testBSize:{test_batch_size}, pushBSize:{train_push_batch_size}, CE:{coeff_crs_ent}, CLS:{coeff_clst}, SEP:{coeff_sep}')
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
     plt.grid()
